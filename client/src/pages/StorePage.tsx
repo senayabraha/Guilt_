@@ -4,7 +4,7 @@ import { MapPin, Store as StoreIcon } from "lucide-react";
 import api from "../config/api";
 import type { Store, StoreSummary } from "../types";
 import ProductCard from "../components/ProductCard";
-import Loader from "../components/Loader";
+import Loading from "../components/Loading";
 
 const StorePage = () => {
   const { slug } = useParams();
@@ -29,7 +29,7 @@ const StorePage = () => {
   if (loading) {
     return (
       <div className="max-w-7xl mx-auto px-4 py-8">
-        <Loader />
+        <Loading />
       </div>
     );
   }

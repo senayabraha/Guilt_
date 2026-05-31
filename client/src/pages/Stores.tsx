@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { MapPin, Store as StoreIcon } from "lucide-react";
 import api from "../config/api";
 import type { Store } from "../types";
-import Loader from "../components/Loader";
+import Loading from "../components/Loading";
 
 const Stores = () => {
   const [stores, setStores] = useState<Store[]>([]);
@@ -32,7 +32,7 @@ const Stores = () => {
       </p>
 
       {loading ? (
-        <Loader />
+        <Loading />
       ) : stores.length === 0 ? (
         <p className="text-app-text-light">No stores are available yet.</p>
       ) : (

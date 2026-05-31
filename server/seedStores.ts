@@ -1,8 +1,5 @@
-import { PrismaClient } from "./generated/prisma/client.js";
+import { prisma } from "./config/prisma.js";
 import bcrypt from "bcrypt";
-import "dotenv/config";
-
-const prisma = new PrismaClient();
 
 // Demo multi-store data for Addis Ababa. Idempotent: re-running upserts by slug.
 const stores = [
