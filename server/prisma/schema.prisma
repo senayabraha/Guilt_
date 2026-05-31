@@ -8,16 +8,44 @@ datasource db {
 }
 
 model User {
-    id        String    @id @default(uuid())
-    name      String
-    email     String    @unique
-    password  String
-    phone     String?   @default("")
-    avatar    String?   @default("")
-    addresses Address[]
-    orders    Order[]
-    createdAt DateTime  @default(now())
-    updatedAt DateTime  @updatedAt
+    id          String    @id @default(uuid())
+    name        String
+    email       String    @unique
+    password    String
+    phone       String?   @default("")
+    avatar      String?   @default("")
+    role        String    @default("customer") // customer | vendor | admin
+    addresses   Address[]
+    orders      Order[]
+    ownedStores Store[]
+    createdAt   DateTime  @default(now())
+    updatedAt   DateTime  @updatedAt
+}
+
+model Store {
+    id             String    @id @default(uuid())
+    name           String
+    slug           String    @unique
+    description    String?   @default("")
+    logo           String?   @default("")
+    ownerId        String?
+    owner          User?     @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+    phone          String?   @default("")
+    email          String?   @default("")
+    subCity        String?   @default("") // Addis Ababa sub-city / delivery zone
+    address        String?   @default("")
+    lat            Float?
+    lng            Float?
+    isApproved     Boolean   @default(false) // admin gate before a store goes live
+    isActive       Boolean   @default(true)
+    deliveryFee    Float     @default(0)
+    minOrderAmount Float     @default(0)
+    taxRate        Float     @default(0) // fraction, e.g. 0.15 for 15% VAT
+    openingHours   String?   @default("")
+    products       Product[]
+    orders         Order[]
+    createdAt      DateTime  @default(now())
+    updatedAt      DateTime  @updatedAt
 }
 
 model Address {
@@ -49,6 +77,8 @@ model Product {
     isOrganic     Boolean? @default(false)
     rating        Float?   @default(0)
     reviewCount   Int?     @default(0)
+    storeId       String?
+    store         Store?   @relation(fields: [storeId], references: [id], onDelete: Cascade)
     createdAt     DateTime @default(now())
     updatedAt     DateTime @updatedAt
 }
@@ -57,6 +87,8 @@ model Order {
     id              String @id @default(uuid())
     userId          String
     user            User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    storeId         String?
+    store           Store?  @relation(fields: [storeId], references: [id], onDelete: SetNull)
     items           Json
     shippingAddress Json
     paymentMethod   String @default("card")

@@ -6,31 +6,45 @@ import Stripe from "stripe";
 // Create order
 // POST /api/orders
 export const createOrder = async (req: Request, res: Response) => {
-    const { items, shippingAddress, paymentMethod } = req.body;
+    const { items, shippingAddress, paymentMethod, storeId } = req.body;
 
     // Check if order items are empty
     if (!items || items.length === 0) {
         return res.status(400).json({ message: "No order items" });
     }
 
-    // Look up actual prices from the database
+    // A single order must belong to exactly one store
+    if (!storeId) {
+        return res.status(400).json({ message: "A store must be selected for the order" });
+    }
+
+    const store = await prisma.store.findUnique({ where: { id: storeId } });
+    if (!store || !store.isActive || !store.isApproved) {
+        return res.status(400).json({ message: "This store is not available for ordering" });
+    }
+
+    // Look up actual prices from the database, scoped to this store so an order
+    // can never mix products from different stores
     const productIds = items.map((i: any) => i.product);
-    const products = await prisma.product.findMany({ where: { id: { in: productIds } } });
+    const products = await prisma.product.findMany({ where: { id: { in: productIds }, storeId } });
     const productMap: Record<string, (typeof products)[0]> = {};
 
     products.forEach((p: any) => (productMap[p.id] = p));
 
-    // Check if product is in stock
+    // Check if product is in stock (and belongs to the selected store)
     for (const item of items) {
         const product = productMap[item.product];
-        if (!product || (product.stock ?? 0) < item.quantity) {
+        if (!product) {
+            return res.status(400).json({ message: "Product is not available from this store" });
+        }
+        if ((product.stock ?? 0) < item.quantity) {
             return res.status(404).json({ message: "Product out of stock" });
         }
     }
 
     const orderItems = items.map((item: any) => {
         const dbProduct = productMap[item.product];
-        if (!dbProduct) throw new Error(`Product ${item.product} not found`);
+        if (!dbProduct) throw new Error(`Product ${item.product} is not available from this store`);
         return {
             product: dbProduct.id,
             name: dbProduct.name,
@@ -42,13 +56,21 @@ export const createOrder = async (req: Request, res: Response) => {
     });
 
     const subtotal = orderItems.reduce((sum: number, item: any) => sum + item.price * item.quantity, 0);
-    const deliveryFee = subtotal > 20 ? 0 : 1.99;
-    const tax = Math.round(subtotal * 0.08 * 100) / 100;
+
+    // Enforce the store's minimum order amount
+    if (subtotal < store.minOrderAmount) {
+        return res.status(400).json({ message: `Minimum order for ${store.name} is ${store.minOrderAmount}` });
+    }
+
+    // Fees come from the store's configuration (not hardcoded)
+    const deliveryFee = store.deliveryFee;
+    const tax = Math.round(subtotal * store.taxRate * 100) / 100;
     const total = Math.round((subtotal + deliveryFee + tax) * 100) / 100;
 
     const order = await prisma.order.create({
         data: {
             userId: req.user!.id,
+            storeId,
             items: orderItems,
             shippingAddress,
             paymentMethod,

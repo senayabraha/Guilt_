@@ -4,10 +4,44 @@ export interface User {
   email: string;
   phone: string;
   avatar: string;
+  role?: string;
   addresses: Address[];
   isAdmin?: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+// Lightweight store info attached to products (used by the cart for store-scoped totals)
+export interface StoreSummary {
+  id: string;
+  name: string;
+  slug: string;
+  deliveryFee: number;
+  taxRate: number;
+  minOrderAmount: number;
+  isActive: boolean;
+  isApproved: boolean;
+}
+
+export interface Store {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  logo?: string;
+  phone?: string;
+  email?: string;
+  subCity?: string;
+  address?: string;
+  lat?: number;
+  lng?: number;
+  isApproved: boolean;
+  isActive: boolean;
+  deliveryFee: number;
+  minOrderAmount: number;
+  taxRate: number;
+  openingHours?: string;
+  products?: Product[];
 }
 
 export interface Address {
@@ -30,6 +64,7 @@ export interface Category {
 
 export interface Product {
   _id: string;
+  id?: string;
   name: string;
   description: string;
   price: number;
@@ -42,6 +77,8 @@ export interface Product {
   rating: number;
   reviewCount: number;
   discount: number;
+  storeId?: string;
+  store?: StoreSummary;
   createdAt: string;
 }
 

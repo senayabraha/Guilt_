@@ -1,11 +1,25 @@
 import { Request, Response } from "express";
 import { prisma } from "../config/prisma.js";
 
+// Public store fields safe to attach to product responses. The client cart uses
+// these (delivery fee / tax rate / min order) to display store-scoped totals.
+const STORE_SELECT = {
+    id: true,
+    name: true,
+    slug: true,
+    deliveryFee: true,
+    taxRate: true,
+    minOrderAmount: true,
+    isActive: true,
+    isApproved: true,
+} as const;
+
 // GET /api/products/flash-deals
 export const getFlashDeals = async (req: Request, res: Response) => {
     const products = await prisma.product.findMany({
         where: { stock: { gt: 0 } },
         orderBy: { originalPrice: "desc" },
+        include: { store: { select: STORE_SELECT } },
     });
 
     const productsWithDiscount = products.map((p: any) => {
@@ -47,7 +61,10 @@ export const getProducts = async (req: Request, res: Response) => {
 // GET /api/products/:id
 
 export const getProduct = async (req: Request, res: Response) => {
-    const product = await prisma.product.findUnique({ where: { id: req.params.id as string } });
+    const product = await prisma.product.findUnique({
+        where: { id: req.params.id as string },
+        include: { store: { select: STORE_SELECT } },
+    });
 
     if (!product) {
         res.status(404).json({ message: "Product not found" });

@@ -21,7 +21,7 @@ const Checkout = () => {
   const navigate = useNavigate();
   const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "₹";
 
-  const { items, cartTotal, clearCart } = useCart();
+  const { items, cartTotal, clearCart, store } = useCart();
   const { user } = useAuth();
 
   const [step, setStep] = useState("address");
@@ -41,8 +41,9 @@ const Checkout = () => {
 
   const [paymentMethod, setPaymentMethod] = useState("card");
 
-  const deliveryFee = cartTotal > 20 ? 0 : 1.99;
-  const tax = cartTotal * 0.08;
+  // Fees are scoped to the cart's store (set per-store, not hardcoded)
+  const deliveryFee = store?.deliveryFee ?? 0;
+  const tax = cartTotal * (store?.taxRate ?? 0);
   const total = cartTotal + deliveryFee + tax;
 
   const steps: { key: string; label: string; icon: typeof MapPinIcon }[] = [
@@ -59,6 +60,7 @@ const Checkout = () => {
           product: item.product.id,
           quantity: item.quantity,
         })),
+        storeId: store?.id,
         shippingAddress: address,
         paymentMethod,
       };

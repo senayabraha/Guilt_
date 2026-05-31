@@ -5,7 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { CartItem, Product } from "../types";
+import type { CartItem, Product, StoreSummary } from "../types";
 
 interface CartContextType {
   items: CartItem[];
@@ -17,6 +17,9 @@ interface CartContextType {
   cartTotal: number;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
+  // The single store the current cart belongs to (an order can only be from one store)
+  storeId: string | null;
+  store: StoreSummary | null;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
@@ -34,6 +37,26 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items]);
 
   const addToCart = (product: Product, quantity = 1) => {
+    // Enforce one-store-per-cart: if the new product is from a different store,
+    // ask the customer before clearing the current cart and starting fresh.
+    const currentStoreId = items[0]?.product.storeId;
+    if (
+      items.length > 0 &&
+      currentStoreId &&
+      product.storeId &&
+      currentStoreId !== product.storeId
+    ) {
+      const currentName = items[0].product.store?.name ?? "another store";
+      const newName = product.store?.name ?? "this store";
+      const ok = window.confirm(
+        `Your cart contains items from ${currentName}. Start a new cart with ${newName}? Your current cart will be cleared.`,
+      );
+      if (!ok) return;
+      setItems([{ product, quantity }]);
+      setIsCartOpen(true);
+      return;
+    }
+
     setItems((prev) => {
       const existing = prev.find((item) => item.product.id === product.id);
       if (existing) {
@@ -75,6 +98,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
     0,
   );
 
+  // The cart is always scoped to a single store (the store of its items)
+  const storeId = items[0]?.product.storeId ?? null;
+  const store = items[0]?.product.store ?? null;
+
   return (
     <CartContext.Provider
       value={{
@@ -87,6 +114,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
         cartTotal,
         isCartOpen,
         setIsCartOpen,
+        storeId,
+        store,
       }}
     >
       {children}

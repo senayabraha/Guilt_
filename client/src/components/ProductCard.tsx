@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import type { Product } from "../types";
 import { Plus, Star } from "lucide-react";
 import { useCart } from "../context/CartContext";
@@ -38,9 +38,20 @@ const ProductCard = ({ product }: Props) => {
 
       {/* Info */}
       <div className="p-3.5 text-zinc-700">
-        <h3 className="text-sm leading-snug mb-1.5 line-clamp-2">
+        <h3 className="text-sm leading-snug mb-1 line-clamp-2">
           {product.name}
         </h3>
+
+        {/* Store */}
+        {product.store && (
+          <Link
+            to={`/stores/${product.store.slug}`}
+            onClick={(e) => e.stopPropagation()}
+            className="text-xs text-app-green hover:underline line-clamp-1 mb-1.5 inline-block"
+          >
+            {product.store.name}
+          </Link>
+        )}
 
         {/* Rating */}
         {product.rating > 0 && (
