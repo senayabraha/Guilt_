@@ -3,6 +3,7 @@ import {
   PlusIcon,
   PackageSearchIcon,
   ShoppingBagIcon,
+  StoreIcon,
   LogOutIcon,
   BarChart3Icon,
   ShieldIcon,
@@ -20,6 +21,7 @@ export default function AdminLayout() {
     { to: "/admin/products/new", label: "Add Product", icon: PlusIcon },
     { to: "/admin/products", label: "Products", icon: PackageSearchIcon },
     { to: "/admin/orders", label: "Orders", icon: ShoppingBagIcon },
+    { to: "/admin/stores", label: "Stores", icon: StoreIcon },
     { to: "/admin/delivery-partners", label: "Delivery Partners", icon: Truck },
     { to: "/", label: "Exit", icon: LogOutIcon },
   ];

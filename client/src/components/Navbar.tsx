@@ -8,6 +8,7 @@ import {
   PackageIcon,
   SearchIcon,
   ShieldIcon,
+  StoreIcon,
   ShoppingCartIcon,
   UserIcon,
   XIcon,
@@ -17,6 +18,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import LanguageSwitcher from "./LanguageSwitcher";
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -54,6 +56,7 @@ const Navbar = () => {
           {/* Nav Links - Desktop */}
           <div className="hidden md:flex items-center gap-6 text-sm text-zinc-600">
             <Link to="/">Home</Link>
+            <Link to="/stores">Stores</Link>
             <Link to="/products">Products</Link>
             <Link to="/deals" className="text-app-orange">
               Deals
@@ -78,6 +81,7 @@ const Navbar = () => {
 
           {/* Right Actions */}
           <div className="flex items-center gap-3">
+            <LanguageSwitcher />
             {/* Cart */}
             <button
               className="relative p-2 rounded-xl"

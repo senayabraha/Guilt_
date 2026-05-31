@@ -10,6 +10,7 @@ import { serve } from "inngest/express";
 import { inngest, functions } from "./inngest/index.js";
 import addressRouter from "./routes/addressRoutes.js";
 import adminRouter from "./routes/adminRoutes.js";
+import vendorRouter from "./routes/vendorRoutes.js";
 import deliveryPartnerRouter from "./routes/deliveryPartnerRoutes.js";
 import { stripeWebhook } from "./controllers/webhooks.js";
 
@@ -38,6 +39,7 @@ app.use("/api/orders", orderRouter);
 app.use("/api/inngest", serve({ client: inngest, functions }));
 app.use("/api/addresses", addressRouter);
 app.use("/api/admin", adminRouter);
+app.use("/api/vendor", vendorRouter);
 app.use("/api/delivery", deliveryPartnerRouter);
 
 // Error handling

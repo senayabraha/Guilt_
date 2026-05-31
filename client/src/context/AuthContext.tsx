@@ -19,6 +19,9 @@ interface AuthContextType {
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
   updateUser: (userData: Partial<User>) => void;
+  // Persist a session obtained outside the standard login/register flow
+  // (e.g. vendor self-registration).
+  applySession: (user: User, token: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -88,6 +91,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const applySession = (newUser: User, newToken: string) => {
+    setUser(newUser);
+    setToken(newToken);
+    localStorage.setItem("auth_token", newToken);
+    localStorage.setItem("auth_user", JSON.stringify(newUser));
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -98,6 +108,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         register,
         logout,
         updateUser,
+        applySession,
       }}
     >
       {children}

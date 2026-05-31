@@ -1,0 +1,69 @@
+{
+  "nav": {
+    "home": "መነሻ",
+    "stores": "ሱቆች",
+    "products": "ምርቶች",
+    "deals": "ቅናሾች",
+    "signIn": "ግባ",
+    "myOrders": "ትዕዛዞቼ",
+    "addresses": "አድራሻዎች",
+    "adminPanel": "የአስተዳዳሪ ፓነል",
+    "vendorPanel": "የሻጭ ፓነል",
+    "logout": "ውጣ",
+    "searchPlaceholder": "ሸቀጣ ሸቀጥ ይፈልጉ..."
+  },
+  "stores": {
+    "title": "በሱቅ ይግዙ",
+    "subtitle": "ግዢ ለመጀመር ሱቅ ይምረጡ። እያንዳንዱ ትዕዛዝ ከአንድ ሱቅ ብቻ ይሟላል።",
+    "none": "እስካሁን ምንም ሱቆች የሉም።",
+    "minOrder": "አነስተኛ ትዕዛዝ",
+    "noMinOrder": "አነስተኛ ትዕዛዝ የለም",
+    "notFound": "ሱቅ አልተገኘም",
+    "noProducts": "ይህ ሱቅ እስካሁን ምርቶች የሉትም።",
+    "becomeVendor": "በገበያችን ላይ ይሽጡ"
+  },
+  "cart": {
+    "switchStoreConfirm": "የእርስዎ ጋሪ ከ{{current}} ዕቃዎችን ይዟል። ከ{{next}} ጋር አዲስ ጋሪ ይጀምሩ? የአሁኑ ጋሪዎ ይጠፋል።"
+  },
+  "checkout": {
+    "title": "ክፍያ",
+    "subtotal": "ንዑስ ድምር",
+    "delivery": "ማድረስ",
+    "tax": "ግብር",
+    "total": "ጠቅላላ",
+    "free": "ነጻ",
+    "placeOrder": "ትዕዛዝ ይስጡ"
+  },
+  "vendor": {
+    "register": "ሻጭ ይሁኑ",
+    "storeName": "የሱቅ ስም",
+    "dashboard": "ዳሽቦርድ",
+    "store": "የእኔ ሱቅ",
+    "products": "ምርቶች",
+    "orders": "ትዕዛዞች",
+    "pendingApproval": "የእርስዎ ሱቅ የአስተዳዳሪ ይሁንታ እየጠበቀ ነው። ከጸደቀ በኋላ ይጀምራል።",
+    "addProduct": "ምርት ጨምር",
+    "saveStore": "ሱቅ አስቀምጥ"
+  },
+  "admin": {
+    "stores": "ሱቆች",
+    "approve": "አጽድቅ",
+    "unapprove": "ይሁንታ ሰርዝ",
+    "suspend": "አግድ",
+    "activate": "አንቃ",
+    "pending": "በመጠባበቅ ላይ",
+    "active": "ንቁ"
+  },
+  "common": {
+    "save": "አስቀምጥ",
+    "cancel": "ሰርዝ",
+    "edit": "አርትዕ",
+    "delete": "ሰርዝ",
+    "loading": "በመጫን ላይ...",
+    "phone": "ስልክ",
+    "email": "ኢሜይል",
+    "name": "ስም",
+    "password": "የይለፍ ቃል",
+    "subCity": "ክፍለ ከተማ"
+  }
+}

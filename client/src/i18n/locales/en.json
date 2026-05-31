@@ -1,0 +1,69 @@
+{
+  "nav": {
+    "home": "Home",
+    "stores": "Stores",
+    "products": "Products",
+    "deals": "Deals",
+    "signIn": "Sign In",
+    "myOrders": "My Orders",
+    "addresses": "Addresses",
+    "adminPanel": "Admin Panel",
+    "vendorPanel": "Vendor Panel",
+    "logout": "Logout",
+    "searchPlaceholder": "Search for groceries..."
+  },
+  "stores": {
+    "title": "Shop by store",
+    "subtitle": "Pick a store to start shopping. Each order is fulfilled by a single store.",
+    "none": "No stores are available yet.",
+    "minOrder": "Min order",
+    "noMinOrder": "No minimum order",
+    "notFound": "Store not found",
+    "noProducts": "This store has no products yet.",
+    "becomeVendor": "Sell on our marketplace"
+  },
+  "cart": {
+    "switchStoreConfirm": "Your cart contains items from {{current}}. Start a new cart with {{next}}? Your current cart will be cleared."
+  },
+  "checkout": {
+    "title": "Checkout",
+    "subtotal": "Subtotal",
+    "delivery": "Delivery",
+    "tax": "Tax",
+    "total": "Total",
+    "free": "Free",
+    "placeOrder": "Place Order"
+  },
+  "vendor": {
+    "register": "Become a vendor",
+    "storeName": "Store name",
+    "dashboard": "Dashboard",
+    "store": "My Store",
+    "products": "Products",
+    "orders": "Orders",
+    "pendingApproval": "Your store is awaiting admin approval. It will go live once approved.",
+    "addProduct": "Add Product",
+    "saveStore": "Save Store"
+  },
+  "admin": {
+    "stores": "Stores",
+    "approve": "Approve",
+    "unapprove": "Unapprove",
+    "suspend": "Suspend",
+    "activate": "Activate",
+    "pending": "Pending",
+    "active": "Active"
+  },
+  "common": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "edit": "Edit",
+    "delete": "Delete",
+    "loading": "Loading...",
+    "phone": "Phone",
+    "email": "Email",
+    "name": "Name",
+    "password": "Password",
+    "subCity": "Sub-city"
+  }
+}

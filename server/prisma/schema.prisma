@@ -57,6 +57,7 @@ model Address {
     city      String
     state     String
     zip       String
+    subCity   String?  @default("") // Addis Ababa sub-city / delivery zone
     isDefault Boolean  @default(false)
     lat       Float
     lng       Float

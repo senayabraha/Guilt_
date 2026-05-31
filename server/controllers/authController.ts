@@ -42,7 +42,65 @@ export const register = async (req: Request, res: Response) => {
     delete userData.password;
     userData.isAdmin = getAdminStatus(userData.email);
 
-    res.status(201).json({ user: userData, token }); // userData includes role
+    res.status(201).json({ user: userData, token }); // userData includes role field
+};
+
+// Helper: turn a store name into a URL-friendly slug
+const slugify = (name: string) =>
+    name
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
+// Register a vendor + their store (self-service onboarding, pending admin approval)
+// POST /api/auth/register-vendor
+export const registerVendor = async (req: Request, res: Response) => {
+    const { name, email, password, phone, storeName, subCity, address } = req.body;
+
+    if (!name || !email || !password || !storeName) {
+        return res.status(400).json({ message: "Please provide your name, email, password and store name" });
+    }
+
+    const existingUser = await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
+    if (existingUser) {
+        return res.status(400).json({ message: "User already exists with this email" });
+    }
+
+    // Build a unique slug (append a short suffix if taken)
+    let slug = slugify(storeName);
+    if (!slug) slug = "store";
+    const slugTaken = await prisma.store.findUnique({ where: { slug } });
+    if (slugTaken) slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const user = await prisma.user.create({
+        data: { name, email: email.toLowerCase(), password: hashedPassword, phone: phone || "", role: "vendor" },
+    });
+
+    // Store starts unapproved + inactive until an admin approves it
+    const store = await prisma.store.create({
+        data: {
+            name: storeName,
+            slug,
+            ownerId: user.id,
+            phone: phone || "",
+            email: email.toLowerCase(),
+            subCity: subCity || "",
+            address: address || "",
+            isApproved: false,
+            isActive: false,
+        },
+    });
+
+    const token = generateToken(user.id);
+
+    const userData: any = { ...user };
+    delete userData.password;
+    userData.isAdmin = getAdminStatus(userData.email);
+
+    res.status(201).json({ user: userData, store, token });
 };
 
 // Login

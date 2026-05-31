@@ -23,6 +23,49 @@ export const getAdminStats = async (req: Request, res: Response) => {
     res.json({ totalOrders, totalUsers, totalProducts, outOfStock, totalPartners, recentOrders });
 };
 
+// list all stores for admin (including pending/unapproved)
+export const getStores = async (req: Request, res: Response) => {
+    const { status } = req.query; // pending | active | all
+    const where: any = {};
+    if (status === "pending") where.isApproved = false;
+    else if (status === "active") { where.isApproved = true; where.isActive = true; }
+
+    const stores = await prisma.store.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        include: { owner: { select: { name: true, email: true, phone: true } } },
+    });
+    res.json({ stores });
+};
+
+// approve (or unapprove) a store; approving also activates it
+export const approveStore = async (req: Request, res: Response) => {
+    const { approved } = req.body; // boolean
+    try {
+        const store = await prisma.store.update({
+            where: { id: req.params.id as string },
+            data: { isApproved: !!approved, isActive: !!approved },
+        });
+        res.json({ store });
+    } catch (error) {
+        res.status(404).json({ message: "Store not found" });
+    }
+};
+
+// suspend / re-activate an already-approved store
+export const setStoreStatus = async (req: Request, res: Response) => {
+    const { isActive } = req.body; // boolean
+    try {
+        const store = await prisma.store.update({
+            where: { id: req.params.id as string },
+            data: { isActive: !!isActive },
+        });
+        res.json({ store });
+    } catch (error) {
+        res.status(404).json({ message: "Store not found" });
+    }
+};
+
 // get delivery partners list for admin
 export const getDeliveryPartners = async (req: Request, res: Response) => {
     const partners = await prisma.deliveryPartner.findMany({ orderBy: { createdAt: "desc" } });
