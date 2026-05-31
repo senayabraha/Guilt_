@@ -169,6 +169,17 @@ const Navbar = () => {
                       <Link to="/deals" className="dropdown-link md:hidden">
                         <ArrowUpRightIcon size={16} /> Deals{" "}
                       </Link>
+                      {user?.role === "vendor" && (
+                        <Link to="/vendor" className="dropdown-link">
+                          <StoreIcon className="text-app-green" size={16} />{" "}
+                          <span className="text-app-green">Vendor Panel</span>{" "}
+                        </Link>
+                      )}
+                      {!user && (
+                        <Link to="/vendor/register" className="dropdown-link">
+                          <StoreIcon size={16} /> Sell on marketplace{" "}
+                        </Link>
+                      )}
                       {user?.isAdmin && (
                         <Link to="/admin/products" className="dropdown-link">
                           <ShieldIcon
