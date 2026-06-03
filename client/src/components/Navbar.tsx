@@ -9,6 +9,7 @@ import {
   SearchIcon,
   ShieldIcon,
   ShoppingCartIcon,
+  StoreIcon,
   UserIcon,
   XIcon,
 } from "lucide-react";
@@ -55,6 +56,7 @@ const Navbar = () => {
           <div className="hidden md:flex items-center gap-6 text-sm text-zinc-600">
             <Link to="/">Home</Link>
             <Link to="/products">Products</Link>
+            <Link to="/stores">Stores</Link>
             <Link to="/deals" className="text-app-orange">
               Deals
             </Link>
@@ -162,9 +164,25 @@ const Navbar = () => {
                         <ArrowUpRightIcon size={16} /> Products{" "}
                       </Link>
 
+                      <Link to="/stores" className="dropdown-link md:hidden">
+                        <ArrowUpRightIcon size={16} /> Stores{" "}
+                      </Link>
+
                       <Link to="/deals" className="dropdown-link md:hidden">
                         <ArrowUpRightIcon size={16} /> Deals{" "}
                       </Link>
+                      {user &&
+                        (user.role === "VENDOR" ? (
+                          <Link to="/vendor" className="dropdown-link">
+                            <StoreIcon size={16} /> Vendor Dashboard{" "}
+                          </Link>
+                        ) : (
+                          !user.isAdmin && (
+                            <Link to="/vendor/apply" className="dropdown-link">
+                              <StoreIcon size={16} /> Become a Seller{" "}
+                            </Link>
+                          )
+                        ))}
                       {user?.isAdmin && (
                         <Link to="/admin/products" className="dropdown-link">
                           <ShieldIcon

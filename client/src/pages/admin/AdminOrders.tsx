@@ -95,6 +95,7 @@ export default function AdminOrders() {
             <thead className="bg-app-cream/50 text-zinc-500 uppercase text-xs font-semibold">
               <tr>
                 <th className="px-6 py-4">Order Details</th>
+                <th className="px-6 py-4">Store</th>
                 <th className="px-6 py-4">Customer</th>
                 <th className="px-6 py-4">Total</th>
                 <th className="px-6 py-4">Delivery Partner</th>
@@ -105,7 +106,7 @@ export default function AdminOrders() {
               {orders.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-6 py-8 text-center text-zinc-500"
                   >
                     No orders found.
@@ -124,6 +125,11 @@ export default function AdminOrders() {
                       <p className="text-xs text-zinc-500">
                         {new Date(order.createdAt).toLocaleString()}
                       </p>
+                    </td>
+                    <td className="px-6 py-4">
+                      <span className="text-sm text-zinc-700">
+                        {order.store?.name || "Platform"}
+                      </span>
                     </td>
                     <td className="px-6 py-4">
                       <p className="font-medium text-zinc-900">

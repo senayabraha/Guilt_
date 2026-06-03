@@ -7,6 +7,8 @@ import Home from "./pages/Home";
 import Products from "./pages/Products";
 import SearchResults from "./pages/SearchResults";
 import FlashDeals from "./pages/FlashDeals";
+import Stores from "./pages/Stores";
+import StoreDetail from "./pages/StoreDetail";
 import Checkout from "./pages/Checkout";
 import MyOrders from "./pages/MyOrders";
 import OrderTracking from "./pages/OrderTracking";
@@ -19,6 +21,16 @@ import AdminProducts from "./pages/admin/AdminProducts";
 import AdminProductForm from "./pages/admin/AdminProductForm";
 import AdminOrders from "./pages/admin/AdminOrders";
 import AdminDeliveryPartners from "./pages/admin/AdminDeliveryPartners";
+import AdminStores from "./pages/admin/AdminStores";
+import AdminStoreDetail from "./pages/admin/AdminStoreDetail";
+
+import VendorLayout from "./pages/vendor/VendorLayout";
+import VendorDashboard from "./pages/vendor/VendorDashboard";
+import VendorProducts from "./pages/vendor/VendorProducts";
+import VendorProductForm from "./pages/vendor/VendorProductForm";
+import VendorOrders from "./pages/vendor/VendorOrders";
+import VendorSettings from "./pages/vendor/VendorSettings";
+import VendorApply from "./pages/vendor/VendorApply";
 
 import DeliveryLogin from "./pages/delivery/DeliveryLogin";
 import DeliveryLayout from "./pages/delivery/DeliveryLayout";
@@ -51,6 +63,8 @@ const App = () => {
           <Route path="products/:id" element={<Products />} />
           <Route path="search" element={<SearchResults />} />
           <Route path="deals" element={<FlashDeals />} />
+          <Route path="stores" element={<Stores />} />
+          <Route path="stores/:id" element={<StoreDetail />} />
           <Route element={<ProtectedRoute />}>
             <Route path="checkout" element={<Checkout />} />
             <Route path="orders" element={<MyOrders />} />
@@ -67,6 +81,19 @@ const App = () => {
           <Route path="products/:id/edit" element={<AdminProductForm />} />
           <Route path="orders" element={<AdminOrders />} />
           <Route path="delivery-partners" element={<AdminDeliveryPartners />} />
+          <Route path="stores" element={<AdminStores />} />
+          <Route path="stores/:id" element={<AdminStoreDetail />} />
+        </Route>
+
+        {/* Vendor pages */}
+        <Route path="/vendor/apply" element={<VendorApply />} />
+        <Route path="/vendor" element={<VendorLayout />}>
+          <Route index element={<VendorDashboard />} />
+          <Route path="products" element={<VendorProducts />} />
+          <Route path="products/new" element={<VendorProductForm />} />
+          <Route path="products/:id/edit" element={<VendorProductForm />} />
+          <Route path="orders" element={<VendorOrders />} />
+          <Route path="settings" element={<VendorSettings />} />
         </Route>
 
         {/* Delivery Partner pages */}
