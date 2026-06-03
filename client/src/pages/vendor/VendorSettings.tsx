@@ -3,6 +3,7 @@ import toast from "react-hot-toast";
 
 import { categoriesData } from "../../assets/assets";
 import Loading from "../../components/Loading";
+import ImageCropUpload from "../../components/ImageCropUpload";
 import { getMyStore, updateMyStore } from "../../lib/db/stores";
 
 const storeStatusColors: Record<string, string> = {
@@ -202,26 +203,24 @@ export default function VendorSettings() {
               className={inputClass}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Logo URL
-            </label>
-            <input
-              type="text"
-              value={form.logo}
-              onChange={(e) => update("logo", e.target.value)}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Cover Image URL
-            </label>
-            <input
-              type="text"
+          <ImageCropUpload
+            label="Store Logo"
+            value={form.logo}
+            aspect={1}
+            recommendedSize="Recommended: 512×512 square image"
+            previewClassName="aspect-square max-w-[220px]"
+            onChange={(url) => update("logo", url)}
+            onRemove={() => update("logo", "")}
+          />
+          <div className="md:col-span-2">
+            <ImageCropUpload
+              label="Store Cover Image"
               value={form.coverImage}
-              onChange={(e) => update("coverImage", e.target.value)}
-              className={inputClass}
+              aspect={16 / 9}
+              recommendedSize="Recommended: 1200×500 wide banner"
+              previewClassName="aspect-video"
+              onChange={(url) => update("coverImage", url)}
+              onRemove={() => update("coverImage", "")}
             />
           </div>
           <div>

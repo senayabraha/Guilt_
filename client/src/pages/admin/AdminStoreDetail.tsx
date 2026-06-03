@@ -84,6 +84,22 @@ export default function AdminStoreDetail() {
           <h2 className="text-xl font-semibold text-zinc-900">Store Details</h2>
         </div>
 
+        {/* Cover image */}
+        <div className="relative h-36 sm:h-44 rounded-xl overflow-hidden bg-app-cream mb-5 flex-center">
+          {store.coverImage ? (
+            <img
+              src={store.coverImage}
+              alt={`${store.name} cover`}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="flex flex-col items-center gap-1 text-app-text-light">
+              <StoreIcon className="size-7" />
+              <span className="text-xs">No cover image</span>
+            </div>
+          )}
+        </div>
+
         <div className="flex flex-col sm:flex-row gap-5 items-start">
           <div className="size-16 rounded-xl bg-app-cream overflow-hidden flex-center shrink-0">
             {store.logo ? (
@@ -130,6 +146,24 @@ export default function AdminStoreDetail() {
               {store.email && (
                 <span className="flex items-center gap-1">
                   <MailIcon className="size-3.5" /> {store.email}
+                </span>
+              )}
+            </div>
+
+            {/* Categories */}
+            <div className="flex flex-wrap gap-1.5 mt-3">
+              {store.categories?.length ? (
+                store.categories.map((c: string) => (
+                  <span
+                    key={c}
+                    className="px-2 py-0.5 text-[10px] font-medium bg-orange-50 text-app-orange-dark rounded-full capitalize"
+                  >
+                    {c.replace(/-/g, " ")}
+                  </span>
+                ))
+              ) : (
+                <span className="text-xs text-app-text-light">
+                  No categories
                 </span>
               )}
             </div>
