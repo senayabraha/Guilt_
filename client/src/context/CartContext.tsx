@@ -5,6 +5,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import toast from "react-hot-toast";
 import type { CartItem, Product } from "../types";
 
 interface CartContextType {
@@ -15,11 +16,15 @@ interface CartContextType {
   clearCart: () => void;
   cartCount: number;
   cartTotal: number;
+  cartStoreId: string | null;
   isCartOpen: boolean;
   setIsCartOpen: (open: boolean) => void;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
+
+const getProductId = (product: Product) => product.id || product._id;
+const getProductStoreId = (product: Product) => product.storeId || product.store?.id || null;
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => {
@@ -34,11 +39,23 @@ export function CartProvider({ children }: { children: ReactNode }) {
   }, [items]);
 
   const addToCart = (product: Product, quantity = 1) => {
+    const incomingStoreId = getProductStoreId(product);
+
     setItems((prev) => {
-      const existing = prev.find((item) => item.product.id === product.id);
+      const cartStoreId = prev.find((item) => getProductStoreId(item.product))
+        ? getProductStoreId(prev.find((item) => getProductStoreId(item.product))!.product)
+        : null;
+
+      if (cartStoreId && incomingStoreId && cartStoreId !== incomingStoreId) {
+        toast.error("Your cart already contains items from another store. Clear cart to shop from this store.");
+        return prev;
+      }
+
+      const productId = getProductId(product);
+      const existing = prev.find((item) => getProductId(item.product) === productId);
       if (existing) {
         return prev.map((item) =>
-          item.product.id === product.id
+          getProductId(item.product) === productId
             ? { ...item, quantity: item.quantity + quantity }
             : item,
         );
@@ -49,7 +66,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   };
 
   const removeFromCart = (productId: string) => {
-    setItems((prev) => prev.filter((item) => item.product.id !== productId));
+    setItems((prev) => prev.filter((item) => getProductId(item.product) !== productId));
   };
 
   const updateQuantity = (productId: string, quantity: number) => {
@@ -59,7 +76,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     }
     setItems((prev) =>
       prev.map((item) =>
-        item.product.id === productId ? { ...item, quantity } : item,
+        getProductId(item.product) === productId ? { ...item, quantity } : item,
       ),
     );
   };
@@ -74,6 +91,9 @@ export function CartProvider({ children }: { children: ReactNode }) {
     (sum, item) => sum + item.product.price * item.quantity,
     0,
   );
+  const cartStoreId = items.find((item) => getProductStoreId(item.product))
+    ? getProductStoreId(items.find((item) => getProductStoreId(item.product))!.product)
+    : null;
 
   return (
     <CartContext.Provider
@@ -85,6 +105,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
         clearCart,
         cartCount,
         cartTotal,
+        cartStoreId,
         isCartOpen,
         setIsCartOpen,
       }}
