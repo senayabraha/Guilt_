@@ -10,6 +10,8 @@ import { inngest, functions } from "./inngest/index.js";
 import addressRouter from "./routes/addressRoutes.js";
 import adminRouter from "./routes/adminRoutes.js";
 import deliveryPartnerRouter from "./routes/deliveryPartnerRoutes.js";
+import storeRouter, { adminStoreRouter } from "./routes/storeRoutes.js";
+import vendorRouter from "./routes/vendorRoutes.js";
 import { stripeWebhook } from "./controllers/webhooks.js";
 
 const app = express();
@@ -31,10 +33,13 @@ app.get("/", (req: Request, res: Response) => {
 });
 app.use("/api/auth", authRouter);
 app.use("/api/products", productRouter);
+app.use("/api/stores", storeRouter);
+app.use("/api/vendor", vendorRouter);
 app.use("/api/upload", uploadRouter);
 app.use("/api/orders", orderRouter);
 app.use("/api/inngest", serve({ client: inngest, functions }));
 app.use("/api/addresses", addressRouter);
+app.use("/api/admin", adminStoreRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/delivery", deliveryPartnerRouter);
 
