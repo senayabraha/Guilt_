@@ -51,34 +51,46 @@ export const getFlashDeals = async (req: Request, res: Response) => {
 export const getProducts = async (req: Request, res: Response) => {
     const { storeId, category, search, minPrice, maxPrice, sort } = req.query;
 
+    // Build AND conditions so the store-visibility filter is never overridden by search/store filters.
+    const and: any[] = [];
+
+    // Store visibility: a specific store (must be approved & open) or any approved
+    // store plus legacy platform-owned products (storeId null).
+    if (storeId) {
+        and.push({ storeId: storeId as string });
+        and.push({ store: { status: StoreStatus.APPROVED, isOpen: true } });
+    } else {
+        and.push({
+            OR: [
+                { storeId: null },
+                { store: { status: StoreStatus.APPROVED, isOpen: true } },
+            ],
+        });
+    }
+
+    if (category && category !== "all") and.push({ category: category as string });
+
+    if (search) {
+        and.push({
+            OR: [
+                { name: { contains: search as string, mode: "insensitive" } },
+                { description: { contains: search as string, mode: "insensitive" } },
+            ],
+        });
+    }
+
+    if (minPrice || maxPrice) {
+        const price: any = {};
+        if (minPrice) price.gte = Number(minPrice);
+        if (maxPrice) price.lte = Number(maxPrice);
+        and.push({ price });
+    }
+
     const where: any = {
         isActive: true,
         stock: { gt: 0 },
-        OR: [
-            { storeId: null },
-            { store: { status: StoreStatus.APPROVED, isOpen: true } },
-        ],
+        AND: and,
     };
-
-    if (storeId) {
-        where.storeId = storeId as string;
-        delete where.OR;
-        where.store = { status: StoreStatus.APPROVED, isOpen: true };
-    }
-
-    if (category && category !== "all") where.category = category as string;
-    if (search) {
-        where.OR = [
-            ...(where.OR || []),
-            { name: { contains: search as string, mode: "insensitive" } },
-            { description: { contains: search as string, mode: "insensitive" } },
-        ];
-    }
-    if (minPrice || maxPrice) {
-        where.price = {};
-        if (minPrice) where.price.gte = Number(minPrice);
-        if (maxPrice) where.price.lte = Number(maxPrice);
-    }
 
     const orderBy: any = {};
     if (sort === "price-low") orderBy.price = "asc";
@@ -176,7 +188,7 @@ export const updateVendorProduct = async (req: Request, res: Response) => {
     const store = await getVendorStore(req.user!.id);
     if (!store) return res.status(404).json({ message: "No store found for this vendor" });
 
-    const product = await prisma.product.findFirst({ where: { id: req.params.id, storeId: store.id } });
+    const product = await prisma.product.findFirst({ where: { id: req.params.id as string, storeId: store.id } });
     if (!product) return res.status(404).json({ message: "Product not found" });
 
     const blockedFields = ["id", "storeId", "createdAt", "updatedAt"];
@@ -198,7 +210,7 @@ export const deleteVendorProduct = async (req: Request, res: Response) => {
     const store = await getVendorStore(req.user!.id);
     if (!store) return res.status(404).json({ message: "No store found for this vendor" });
 
-    const product = await prisma.product.findFirst({ where: { id: req.params.id, storeId: store.id } });
+    const product = await prisma.product.findFirst({ where: { id: req.params.id as string, storeId: store.id } });
     if (!product) return res.status(404).json({ message: "Product not found" });
 
     await prisma.product.update({ where: { id: product.id }, data: { isActive: false, stock: 0 } });

@@ -108,7 +108,7 @@ const Addresses = () => {
       zip: add.zip,
       isDefault: add.isDefault,
     });
-    setEditingId(add.id);
+    setEditingId(add.id || add._id);
     setShowForm(true);
   };
 

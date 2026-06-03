@@ -60,7 +60,7 @@ export const getPublicStores = async (req: Request, res: Response) => {
 
 export const getPublicStore = async (req: Request, res: Response) => {
     const store = await prisma.store.findFirst({
-        where: { id: req.params.id, status: StoreStatus.APPROVED, isOpen: true },
+        where: { id: req.params.id as string, status: StoreStatus.APPROVED, isOpen: true },
         select: {
             ...storeSelect,
             _count: { select: { products: true, orders: true } },
@@ -72,7 +72,7 @@ export const getPublicStore = async (req: Request, res: Response) => {
 };
 
 export const getPublicStoreProducts = async (req: Request, res: Response) => {
-    const store = await prisma.store.findFirst({ where: { id: req.params.id, status: StoreStatus.APPROVED, isOpen: true } });
+    const store = await prisma.store.findFirst({ where: { id: req.params.id as string, status: StoreStatus.APPROVED, isOpen: true } });
     if (!store) return res.status(404).json({ message: "Store not found" });
 
     const products = await prisma.product.findMany({
@@ -167,7 +167,7 @@ export const getAdminStores = async (req: Request, res: Response) => {
 
 export const getAdminStore = async (req: Request, res: Response) => {
     const store = await prisma.store.findUnique({
-        where: { id: req.params.id },
+        where: { id: req.params.id as string },
         include: {
             owner: { select: { id: true, name: true, email: true, phone: true, role: true } },
             products: { orderBy: { createdAt: "desc" } },
@@ -188,16 +188,16 @@ export const updateAdminStore = async (req: Request, res: Response) => {
         if (req.body[field] !== undefined) data[field] = req.body[field];
     }
 
-    const store = await prisma.store.update({ where: { id: req.params.id }, data });
+    const store = await prisma.store.update({ where: { id: req.params.id as string }, data });
     res.json({ store });
 };
 
 export const approveStore = async (req: Request, res: Response) => {
-    const store = await prisma.store.update({ where: { id: req.params.id }, data: { status: StoreStatus.APPROVED } });
+    const store = await prisma.store.update({ where: { id: req.params.id as string }, data: { status: StoreStatus.APPROVED } });
     res.json({ store });
 };
 
 export const suspendStore = async (req: Request, res: Response) => {
-    const store = await prisma.store.update({ where: { id: req.params.id }, data: { status: StoreStatus.SUSPENDED } });
+    const store = await prisma.store.update({ where: { id: req.params.id as string }, data: { status: StoreStatus.SUSPENDED } });
     res.json({ store });
 };

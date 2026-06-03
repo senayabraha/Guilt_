@@ -3,6 +3,18 @@ import { prisma } from "../config/prisma.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 
+// Store pickup info exposed to delivery partners
+const pickupStoreSelect = {
+    id: true,
+    name: true,
+    phone: true,
+    address: true,
+    city: true,
+    state: true,
+    lat: true,
+    lng: true,
+};
+
 const generateToken = (id: string) => {
     return jwt.sign({ id, role: "delivery" }, process.env.JWT_SECRET as string, { expiresIn: "30d" });
 };
@@ -56,7 +68,10 @@ export const getMyDeliveries = async (req: Request, res: Response) => {
 
     const orders = await prisma.order.findMany({
         where,
-        include: { user: { select: { name: true, email: true, phone: true } } },
+        include: {
+            user: { select: { name: true, email: true, phone: true } },
+            store: { select: pickupStoreSelect },
+        },
         orderBy: { createdAt: "desc" },
     });
 
@@ -68,7 +83,10 @@ export const getMyDeliveries = async (req: Request, res: Response) => {
 export const getDeliveryDetail = async (req: Request, res: Response) => {
     const order = await prisma.order.findFirst({
         where: { id: req.params.id as string, deliveryPartnerId: req.partner!.id },
-        include: { user: { select: { name: true, email: true, phone: true } } },
+        include: {
+            user: { select: { name: true, email: true, phone: true } },
+            store: { select: pickupStoreSelect },
+        },
     });
 
     if (!order) {

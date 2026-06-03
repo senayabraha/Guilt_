@@ -124,7 +124,7 @@ export default function AdminProducts() {
                         </Link>
                         <button
                           onClick={() =>
-                            handleMarkOutOfStock(product.id, product.name)
+                            handleMarkOutOfStock(product.id || product._id, product.name)
                           }
                           title="Mark Out of Stock"
                           className="p-2 text-zinc-500 hover:text-red-600 bg-zinc-100 hover:bg-red-50 rounded-lg transition-colors"

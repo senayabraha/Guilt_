@@ -131,7 +131,7 @@ export default function AdminDeliveryPartners() {
                 </p>
               </div>
               <button
-                onClick={() => toggleActive(p.id, p.isActive)}
+                onClick={() => toggleActive(p.id || p._id, p.isActive)}
                 className={`w-full py-2 text-xs font-medium rounded-lg transition-colors ${p.isActive ? "bg-red-50 text-red-600 hover:bg-red-100" : "bg-green-50 text-green-600 hover:bg-green-100"}`}
               >
                 {p.isActive ? "Deactivate" : "Activate"}

@@ -217,7 +217,7 @@ export default function AdminOrders() {
                         name="partner"
                         value={p.id}
                         checked={selectedPartner === p.id}
-                        onChange={() => setSelectedPartner(p.id)}
+                        onChange={() => setSelectedPartner(p.id || p._id)}
                         className="text-app-green"
                       />
                       <div className="size-8 rounded-full bg-app-green flex-center">

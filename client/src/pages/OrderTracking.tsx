@@ -74,7 +74,7 @@ const OrderTracking = () => {
         <div className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-2xl font-semibold text-app-green">
-              Order #{order!.id.slice(-8).toUpperCase()}
+              Order #{(order!.id || order!._id).slice(-8).toUpperCase()}
             </h1>
             <p className="text-sm text-app-text-light mt-1">
               Placed on{" "}

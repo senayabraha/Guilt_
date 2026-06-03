@@ -67,7 +67,7 @@ const AddressCard = ({
         </button>
 
         <button
-          onClick={() => handleDelete(addr.id)}
+          onClick={() => handleDelete(addr.id || addr._id)}
           className="p-2 text-app-text-light hover:text-app-error hover:bg-red-50 rounded-lg transition-colors"
         >
           <Trash2Icon className="size-4" />

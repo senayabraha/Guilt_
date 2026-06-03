@@ -51,7 +51,7 @@ export const getVendorOrder = async (req: Request, res: Response) => {
     if (!store) return res.status(404).json({ message: "No store found for this vendor" });
 
     const order = await prisma.order.findFirst({
-        where: { id: req.params.id, storeId: store.id },
+        where: { id: req.params.id as string, storeId: store.id },
         include: {
             user: { select: { name: true, email: true, phone: true } },
             deliveryPartner: { select: { name: true, phone: true } },
@@ -72,7 +72,7 @@ export const updateVendorOrderStatus = async (req: Request, res: Response) => {
     const store = await getVendorStore(req.user!.id);
     if (!store) return res.status(404).json({ message: "No store found for this vendor" });
 
-    const order = await prisma.order.findFirst({ where: { id: req.params.id, storeId: store.id } });
+    const order = await prisma.order.findFirst({ where: { id: req.params.id as string, storeId: store.id } });
     if (!order) return res.status(404).json({ message: "Order not found" });
 
     const updatedOrder = await prisma.order.update({

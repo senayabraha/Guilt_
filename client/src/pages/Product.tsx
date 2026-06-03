@@ -57,15 +57,15 @@ const ProductPage = () => {
   const handleMinus = () => {
     if (inCart) {
       if (cartItem.quantity > 1)
-        updateQuantity(product.id, cartItem.quantity - 1);
-      else removeFromCart(product.id);
+        updateQuantity(product.id || product._id, cartItem.quantity - 1);
+      else removeFromCart(product.id || product._id);
     } else {
       setLocalQuantity(Math.max(1, localQuantity - 1));
     }
   };
 
   const handlePlus = () => {
-    if (inCart) updateQuantity(product.id, cartItem.quantity + 1);
+    if (inCart) updateQuantity(product.id || product._id, cartItem.quantity + 1);
     else setLocalQuantity(localQuantity + 1);
   };
 

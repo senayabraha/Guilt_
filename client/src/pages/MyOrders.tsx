@@ -98,7 +98,7 @@ const MyOrders = () => {
                   {/* left  */}
                   <div>
                     <p className="text-sm font-medium text-app-green">
-                      Order #{order.id.slice(-8).toUpperCase()}
+                      Order #{(order.id || order._id).slice(-8).toUpperCase()}
                     </p>
                     <div className="flex items-center gap-2 mt-1">
                       <CalendarIcon className="size-3 text-app-text-light" />
