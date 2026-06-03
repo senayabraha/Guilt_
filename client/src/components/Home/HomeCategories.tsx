@@ -4,15 +4,17 @@ import { categoriesData } from "../../assets/assets";
 
 const HomeCategories = () => {
   return (
-    <section className="py-16">
+    <section className="py-8">
       <div className="max-w-7xl mx-auto">
         <div>
-          <h2 className="text-2xl font-semibold">Shop by category</h2>
+          <h2 className="text-xl font-semibold text-app-green">
+            Shop by category
+          </h2>
           <p className="text-sm text-app-text-light mt-1">
             Everyday essentials from stores near you
           </p>
         </div>
-        <div className="flex items-center mt-8 overflow-x-scroll no-scrollbar">
+        <div className="flex items-center mt-5 overflow-x-scroll no-scrollbar">
           {categoriesData.map((cat) => (
             <Link
               key={cat.slug}

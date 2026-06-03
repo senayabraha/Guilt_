@@ -1,13 +1,10 @@
 import { useEffect, useState } from "react";
 
-import Hero from "../components/Home/Hero";
 import HomeSearch from "../components/Home/HomeSearch";
+import FeaturedStores from "../components/Home/FeaturedStores";
+import Hero from "../components/Home/Hero";
 import Features from "../components/Home/Features";
-import ShopByStore from "../components/Home/ShopByStore";
-import NearbyStores from "../components/Home/NearbyStores";
-import TodaysDeals from "../components/Home/TodaysDeals";
 import HomeCategories from "../components/Home/HomeCategories";
-import PopularProducts from "../components/Home/PopularProducts";
 import MarketplaceCTAs from "../components/Home/MarketplaceCTAs";
 import Newsletter from "../components/Home/Newsletter";
 
@@ -26,35 +23,26 @@ const Home = () => {
   }, []);
 
   return (
-    <div className="min-h-screen max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
-      {/* 1. Hero */}
-      <Hero />
-
-      {/* 2. Search bar + location */}
+    <div className="min-h-screen max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
+      {/* 1. Location + search (top) */}
       <HomeSearch />
 
-      {/* 3. Trust / delivery badges */}
+      {/* 2. Featured stores (compact row) */}
+      <FeaturedStores stores={stores} loading={storesLoading} />
+
+      {/* 3. Smaller hero card */}
+      <Hero />
+
+      {/* 4. Trust badges (horizontal row) */}
       <Features />
 
-      {/* 4. Shop by store (compact) */}
-      <ShopByStore stores={stores} loading={storesLoading} />
-
-      {/* 5. Stores near you in Addis Ababa */}
-      <NearbyStores stores={stores} loading={storesLoading} />
-
-      {/* 6. Today's deals / store specials */}
-      <TodaysDeals />
-
-      {/* 7. Shop by category */}
+      {/* 5. Shop by category */}
       <HomeCategories />
 
-      {/* 8. Fresh picks from Addis stores */}
-      <PopularProducts />
-
-      {/* 9 + 10. Vendor & Delivery Partner CTAs */}
+      {/* 6 + 7. Vendor & Delivery Partner CTAs */}
       <MarketplaceCTAs />
 
-      {/* 11. Newsletter */}
+      {/* 8. Newsletter */}
       <Newsletter />
     </div>
   );

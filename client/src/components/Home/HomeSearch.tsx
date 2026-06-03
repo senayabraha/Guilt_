@@ -17,8 +17,8 @@ const HomeSearch = () => {
   };
 
   return (
-    <section className="-mt-6 mb-10 relative z-10">
-      <div className="bg-white rounded-2xl shadow-md border border-app-border p-4 sm:p-5">
+    <section className="mb-6">
+      <div className="bg-white rounded-2xl shadow-sm border border-app-border p-4 sm:p-5">
         <div className="flex items-center justify-between gap-3 mb-3">
           <LocationSelector />
           <span className="hidden sm:inline text-xs text-app-text-light">
