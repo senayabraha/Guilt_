@@ -7,10 +7,14 @@ import AddressCard from "../components/AddressCard";
 import AddressForm from "../components/AddressForm";
 import { useAuth } from "../context/AuthContext";
 import type { Address } from "../types";
-import api from "../config/api";
+import {
+  getMyAddresses,
+  createAddress,
+  updateAddress,
+} from "../lib/db/addresses";
 
 const Addresses = () => {
-  const { updateUser } = useAuth();
+  const { user } = useAuth();
 
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [loading, setLoading] = useState(true);
@@ -83,19 +87,17 @@ const Addresses = () => {
       const payload = { ...form, ...coords };
 
       if (editingId) {
-        const { data } = await api.put(`/addresses/${editingId}`, payload);
-        setAddresses(data.addresses);
-        updateUser({ addresses: data.addresses });
+        await updateAddress(editingId, payload);
         toast.success("Address updated!");
       } else {
-        const { data } = await api.post(`/addresses`, payload);
-        setAddresses(data.addresses);
-        updateUser({ addresses: data.addresses });
+        if (!user) return;
+        await createAddress(payload, user.id || user._id);
         toast.success("Address added!");
       }
+      setAddresses(await getMyAddresses());
       resetForm();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || error.message || "Failed");
+      toast.error(error?.message || "Failed");
     }
   };
 
@@ -113,13 +115,10 @@ const Addresses = () => {
   };
 
   useEffect(() => {
-    api
-      .get("/addresses")
-      .then(({ data }) => {
-        setAddresses(data.addresses);
-      })
+    getMyAddresses()
+      .then(setAddresses)
       .catch((error: any) => {
-        toast.error(error.response?.data?.message || error?.message);
+        toast.error(error?.message || "Failed to load addresses");
       })
       .finally(() => {
         setLoading(false);

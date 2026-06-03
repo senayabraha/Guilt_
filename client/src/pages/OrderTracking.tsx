@@ -7,7 +7,7 @@ import Loading from "../components/Loading";
 import OrderOTP from "../components/OrderTracking/OrderOTP";
 import LiveMap from "../components/OrderTracking/LiveMap";
 import OrderTimeLine from "../components/OrderTracking/OrderTimeLine";
-import api from "../config/api";
+import { getOrder, getOrderLocation } from "../lib/db/orders";
 
 const OrderTracking = () => {
   const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "₹";
@@ -21,9 +21,12 @@ const OrderTracking = () => {
   } | null>(null);
 
   useEffect(() => {
-    api
-      .get(`/orders/${id}`)
-      .then((res) => setOrder(res.data.order))
+    if (!id) return;
+    getOrder(id)
+      .then((o) => {
+        if (!o) navigate("/orders");
+        else setOrder(o);
+      })
       .catch(() => navigate("/orders"))
       .finally(() => setLoading(false));
   }, [id, navigate]);
@@ -35,7 +38,9 @@ const OrderTracking = () => {
 
     const fetchLocation = async () => {
       try {
-        const { data } = await api.get(`/orders/${id}/location`);
+        if (!id) return;
+        const data = await getOrderLocation(id);
+        if (!data) return;
         if (
           data.liveLocation?.lat &&
           data.liveLocation?.lng &&

@@ -1,7 +1,6 @@
 import type { Address } from "../types";
 import { CheckIcon, MapPinIcon, PencilIcon, Trash2Icon } from "lucide-react";
-import api from "../config/api";
-import { useAuth } from "../context/AuthContext";
+import { deleteAddress, getMyAddresses } from "../lib/db/addresses";
 import toast from "react-hot-toast";
 
 interface AddressCardProps {
@@ -15,20 +14,17 @@ const AddressCard = ({
   onEditHandler,
   setAddresses,
 }: AddressCardProps) => {
-  const { updateUser } = useAuth();
-
   const handleDelete = async (id: string) => {
     try {
       const confirm = window.confirm(
         "Are you sure you want to delete this address?",
       );
       if (!confirm) return;
-      const { data } = await api.delete(`/addresses/${id}`);
-      setAddresses(data.addresses);
-      updateUser({ addresses: data.addresses });
+      await deleteAddress(id);
+      setAddresses(await getMyAddresses());
       toast.success("Address removed");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || error?.message);
+      toast.error(error?.message || "Failed to remove address");
     }
   };
 

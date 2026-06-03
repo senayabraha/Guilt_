@@ -5,7 +5,7 @@ import toast from "react-hot-toast";
 
 import type { Store } from "../types";
 import Loading from "../components/Loading";
-import api from "../config/api";
+import { getPublicStores } from "../lib/db/stores";
 
 const Stores = () => {
   const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "$";
@@ -18,12 +18,10 @@ const Stores = () => {
   const fetchStores = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (query) params.set("search", query);
-      const { data } = await api.get(`/stores?${params.toString()}`);
-      setStores(data.stores);
+      const data = await getPublicStores({ search: query });
+      setStores(data);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to load stores");
+      toast.error(error?.message || "Failed to load stores");
     } finally {
       setLoading(false);
     }

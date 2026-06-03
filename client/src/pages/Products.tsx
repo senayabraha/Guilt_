@@ -8,7 +8,7 @@ import { categoriesData } from "../assets/assets";
 import ProductCard from "../components/ProductCard";
 import Loading from "../components/Loading";
 import FilterPanel from "../components/FilterPanel";
-import api from "../config/api";
+import { getPublicProducts } from "../lib/db/products";
 
 const Products = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -27,20 +27,18 @@ const Products = () => {
   const fetchProducts = async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (category) params.set("category", category);
-      if (organic) params.set("organic", organic);
-      if (sort) params.set("sort", sort);
-      if (sort) params.set("sort", sort);
-      if (maxPrice) params.set("maxPrice", maxPrice);
-      params.set("page", String(page));
-      params.set("limit", "12");
-
-      const { data } = await api.get(`/products?${params.toString()}`);
-      setProducts(data.products);
-      setTotalPages(data.pages);
+      let data = await getPublicProducts({
+        category,
+        sort,
+        minPrice,
+        maxPrice,
+      });
+      // Organic is filtered client-side (not a server query param).
+      if (organic) data = data.filter((p) => p.isOrganic);
+      setProducts(data);
+      setTotalPages(1);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || error?.message);
+      toast.error(error?.message || "Failed to load products");
     } finally {
       setLoading(false);
     }

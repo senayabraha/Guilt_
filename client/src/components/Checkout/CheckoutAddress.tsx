@@ -1,19 +1,19 @@
 import { ChevronRightIcon, MapPinIcon, PlusIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 
-const CheckoutAddress = ({ user, address, setAddress, setStep }: any) => {
+const CheckoutAddress = ({ addresses, address, setAddress, setStep }: any) => {
   return (
     <div className="bg-white rounded-2xl p-6 animate-fade-in">
       <h2 className="text-lg font-semibold text-app-green mb-5 flex items-center gap-2">
         <MapPinIcon className="size-5" /> Delivery Address
       </h2>
-      {user?.addresses && user.addresses.length > 0 && (
+      {addresses && addresses.length > 0 && (
         <div className="mb-6">
           <h3 className="text-sm font-semibold text-app-green mb-3">
             Saved Addresses
           </h3>
           <div className="grid sm:grid-cols-2 gap-3">
-            {user.addresses.map((addr: any) => (
+            {addresses.map((addr: any) => (
               <div
                 key={addr._id || addr.label}
                 onClick={() =>

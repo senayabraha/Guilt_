@@ -16,7 +16,7 @@ import type { Product } from "../types";
 import Loading from "../components/Loading";
 import DummyReviewsSection from "../assets/DummyReviewsSection";
 import ProductCard from "../components/ProductCard";
-import api from "../config/api";
+import { getProduct, getPublicProducts } from "../lib/db/products";
 
 const ProductPage = () => {
   const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "$";
@@ -34,14 +34,16 @@ const ProductPage = () => {
     setLocalQuantity(1);
     window.scrollTo(0, 0);
 
-    api
-      .get(`/products/${id}`)
-      .then(({ data }) => {
-        setProduct(data.product);
-        return api.get(`/products?category=${data.product.category}`);
-      })
-      .then(({ data }) => {
-        setRelatedProducts(data.products.filter((p: Product) => p.id !== id));
+    if (!id) return;
+    getProduct(id)
+      .then(async (prod) => {
+        if (!prod) {
+          navigate("/products");
+          return;
+        }
+        setProduct(prod);
+        const related = await getPublicProducts({ category: prod.category });
+        setRelatedProducts(related.filter((p) => p.id !== id));
       })
       .catch(() => navigate("/products"))
       .finally(() => setLoading(false));

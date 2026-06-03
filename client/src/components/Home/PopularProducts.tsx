@@ -6,19 +6,16 @@ import toast from "react-hot-toast";
 import type { Product } from "../../types";
 import ProductCard from "../ProductCard";
 
-import api from "../../config/api";
+import { getPublicProducts } from "../../lib/db/products";
 
 const PopularProducts = () => {
   const [products, setProducts] = useState<Product[]>([]);
 
   useEffect(() => {
-    api
-      .get("/products?sort=rating")
-      .then(({ data }) => {
-        setProducts(data.products);
-      })
+    getPublicProducts({ sort: "rating" })
+      .then(setProducts)
       .catch((error: any) => {
-        toast.error(error.response.data.message || error?.message);
+        toast.error(error?.message || "Failed to load products");
       });
   }, []);
 

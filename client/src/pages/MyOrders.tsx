@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { useCart } from "../context/CartContext";
 import { statusColors } from "../assets/assets";
 import Loading from "../components/Loading";
-import api from "../config/api";
+import { getMyOrders } from "../lib/db/orders";
 import type { Order } from "../types";
 
 const MyOrders = () => {
@@ -24,11 +24,10 @@ const MyOrders = () => {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const params = activeTab !== "all" ? `?status=${activeTab}` : "";
-      const { data } = await api.get(`/orders${params}`);
-      setOrders(data.orders);
+      const data = await getMyOrders(activeTab);
+      setOrders(data);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || error?.message);
+      toast.error(error?.message || "Failed to load orders");
     } finally {
       setLoading(false);
     }

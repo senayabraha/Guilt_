@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -14,18 +14,18 @@ import type { Address } from "../types";
 import CheckoutAddress from "../components/Checkout/CheckoutAddress";
 import CheckoutPayment from "../components/Checkout/CheckoutPayment";
 import CheckoutReview from "../components/Checkout/CheckoutReview";
-import api from "../config/api";
-import { useAuth } from "../context/AuthContext";
+import { supabase } from "../lib/supabase";
+import { getMyAddresses } from "../lib/db/addresses";
 
 const Checkout = () => {
   const navigate = useNavigate();
   const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "₹";
 
   const { items, cartTotal, clearCart } = useCart();
-  const { user } = useAuth();
 
   const [step, setStep] = useState("address");
   const [loading, setLoading] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState<Address[]>([]);
 
   const [address, setAddress] = useState<Address>({
     _id: "",
@@ -57,50 +57,48 @@ const Checkout = () => {
     try {
       const orderData = {
         items: items.map((item) => ({
-          product: item.product.id,
+          product: item.product.id || item.product._id,
           quantity: item.quantity,
         })),
         shippingAddress: address,
         paymentMethod,
       };
 
-      const { data } = await api.post("/orders", orderData);
-      console.log(data);
+      // Order validation, totals, and (for card) Stripe checkout all happen
+      // server-side in the Supabase Edge Function.
+      const { data, error } = await supabase.functions.invoke(
+        "create-checkout-session",
+        { body: orderData },
+      );
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
 
-      if (data.url) {
+      if (data?.url) {
         window.location.href = data.url;
         return;
       }
       clearCart();
       toast.success("Order placed successfully!");
-      navigate(`/orders/${data.order.id}`);
+      navigate(`/orders/${data.orderId}`);
     } catch (error: any) {
-      toast.error(error.response?.data?.message || error.message);
+      toast.error(error?.message || "Failed to place order");
     } finally {
       setLoading(false);
       scrollTo(0, 0);
     }
   };
 
-  // Populate address from user's default address
-  useState(() => {
-    if (user?.addresses?.length) {
-      const defaultAddr =
-        user.addresses.find((a) => a.isDefault) || user.addresses[0];
-      setAddress({
-        _id: defaultAddr?._id,
-        id: defaultAddr?.id,
-        label: defaultAddr?.label,
-        address: defaultAddr?.address,
-        city: defaultAddr?.city,
-        state: defaultAddr?.state,
-        zip: defaultAddr?.zip,
-        isDefault: defaultAddr?.isDefault,
-        lat: defaultAddr?.lat,
-        lng: defaultAddr?.lng,
-      });
-    }
-  });
+  // Populate address from the user's default saved address.
+  useEffect(() => {
+    getMyAddresses()
+      .then((addresses) => {
+        setSavedAddresses(addresses);
+        if (!addresses.length) return;
+        const def = addresses.find((a) => a.isDefault) || addresses[0];
+        setAddress(def);
+      })
+      .catch(() => {});
+  }, []);
 
   if (items.length === 0) {
     return (
@@ -161,7 +159,7 @@ const Checkout = () => {
                 address={address}
                 setAddress={setAddress}
                 setStep={setStep}
-                user={user}
+                addresses={savedAddresses}
               />
             )}
 

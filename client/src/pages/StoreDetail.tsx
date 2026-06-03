@@ -12,7 +12,7 @@ import toast from "react-hot-toast";
 import type { Product, Store } from "../types";
 import ProductCard from "../components/ProductCard";
 import Loading from "../components/Loading";
-import api from "../config/api";
+import { getPublicStore, getPublicStoreProducts } from "../lib/db/stores";
 
 const StoreDetail = () => {
   const { id } = useParams();
@@ -23,17 +23,18 @@ const StoreDetail = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!id) return;
     const fetchData = async () => {
       setLoading(true);
       try {
-        const [storeRes, productsRes] = await Promise.all([
-          api.get(`/stores/${id}`),
-          api.get(`/stores/${id}/products`),
+        const [storeData, productsData] = await Promise.all([
+          getPublicStore(id),
+          getPublicStoreProducts(id),
         ]);
-        setStore(storeRes.data.store);
-        setProducts(productsRes.data.products);
+        setStore(storeData);
+        setProducts(productsData);
       } catch (error: any) {
-        toast.error(error?.response?.data?.message || "Failed to load store");
+        toast.error(error?.message || "Failed to load store");
       } finally {
         setLoading(false);
       }
