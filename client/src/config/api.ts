@@ -1,7 +1,9 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_BASE_URL,
+  // In a single-project deploy the API is same-origin under /api.
+  // Set VITE_BASE_URL to a full URL when the backend is hosted separately.
+  baseURL: import.meta.env.VITE_BASE_URL || "/api",
 });
 
 // Inject JWT token from localStorage into every request
