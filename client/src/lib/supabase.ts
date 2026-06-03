@@ -1,7 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const rawSupabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
+const normalizeSupabaseUrl = (url?: string) =>
+  url?.trim().replace(/\/rest\/v1\/?$/i, "").replace(/\/+$/, "");
+
+const supabaseUrl = normalizeSupabaseUrl(rawSupabaseUrl);
 
 // Whether real Supabase credentials are present.
 export const isSupabaseConfigured = Boolean(supabaseUrl && supabasePublishableKey);
