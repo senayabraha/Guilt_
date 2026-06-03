@@ -2,7 +2,10 @@ import { supabase } from "../supabase";
 import { mapStore, mapProduct, toStoreRow } from "./mappers";
 import type { Product, Store } from "../../types";
 
-const STORE_WITH_COUNTS = "*, products(count), orders(count)";
+// Public store reads must NOT request orders(count): selecting related orders
+// triggers the orders RLS policy (which references stores), causing infinite
+// recursion. Product counts are safe.
+const STORE_WITH_COUNTS = "*, products(count)";
 const STORE_WITH_OWNER_COUNTS =
   "*, owner:profiles(id, name, email, phone, role), products(count), orders(count)";
 
