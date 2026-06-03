@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 
 import HomeSearch from "../components/Home/HomeSearch";
+import QuickTabs from "../components/Home/QuickTabs";
 import FeaturedStores from "../components/Home/FeaturedStores";
 import Hero from "../components/Home/Hero";
-import Features from "../components/Home/Features";
 import HomeCategories from "../components/Home/HomeCategories";
+import Features from "../components/Home/Features";
 import MarketplaceCTAs from "../components/Home/MarketplaceCTAs";
 import Newsletter from "../components/Home/Newsletter";
 
@@ -23,26 +24,29 @@ const Home = () => {
   }, []);
 
   return (
-    <div className="min-h-screen max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 sm:py-6">
-      {/* 1. Location + search (top) */}
+    <div className="min-h-screen max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+      {/* Location + search (top) */}
       <HomeSearch />
 
-      {/* 2. Featured stores (compact row) */}
+      {/* Horizontal quick tabs */}
+      <QuickTabs />
+
+      {/* Featured stores grid (store-first) */}
       <FeaturedStores stores={stores} loading={storesLoading} />
 
-      {/* 3. Smaller hero card */}
+      {/* Compact promo / hero card */}
       <Hero />
 
-      {/* 4. Trust badges (horizontal row) */}
-      <Features />
-
-      {/* 5. Shop by category */}
+      {/* Shop by category */}
       <HomeCategories />
 
-      {/* 6 + 7. Vendor & Delivery Partner CTAs */}
+      {/* Trust cards row */}
+      <Features />
+
+      {/* Lower, compact store-owner & delivery CTAs */}
       <MarketplaceCTAs />
 
-      {/* 8. Newsletter */}
+      {/* Stay in the loop */}
       <Newsletter />
     </div>
   );

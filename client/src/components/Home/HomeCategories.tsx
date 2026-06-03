@@ -4,7 +4,7 @@ import { categoriesData } from "../../assets/assets";
 
 const HomeCategories = () => {
   return (
-    <section className="py-8">
+    <section id="categories" className="py-8 scroll-mt-20">
       <div className="max-w-7xl mx-auto">
         <div>
           <h2 className="text-xl font-semibold text-app-green">
