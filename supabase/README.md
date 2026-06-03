@@ -21,36 +21,48 @@ operations run in Edge Functions.
 
 ```
 VITE_SUPABASE_URL=https://<project>.supabase.co
-VITE_SUPABASE_ANON_KEY=<anon key>
-VITE_STRIPE_PUBLISHABLE_KEY=<pk_...>   # optional
+VITE_SUPABASE_PUBLISHABLE_KEY=<publishable / anon key>
 VITE_CURRENCY_SYMBOL=$
 ```
 
 `VITE_BASE_URL` is no longer required — the app no longer calls the Express API.
 
-## 3. Edge Functions
+## 3. Checkout (current: cash/test flow — no Stripe)
 
-Deploy with the Supabase CLI:
+Checkout currently creates orders directly via the `place_order` RPC (in
+`schema.sql`): it validates the cart, enforces a single store, computes totals,
+creates a `payment_method = 'cash'`, `is_paid = false`, `status = 'Placed'`
+order, and decrements stock. **No Stripe setup is required.**
+
+## 4. Edge Functions
+
+Only `admin-create-delivery-partner` is needed for current functionality
+(creating delivery partners):
 
 ```
-supabase functions deploy create-checkout-session
 supabase functions deploy admin-create-delivery-partner
-supabase functions deploy stripe-webhook --no-verify-jwt
-```
-
-Set function secrets:
-
-```
-supabase secrets set STRIPE_SECRET_KEY=sk_... STRIPE_WEBHOOK_SECRET=whsec_...
 ```
 
 `SUPABASE_URL`, `SUPABASE_ANON_KEY`, and `SUPABASE_SERVICE_ROLE_KEY` are
 injected automatically for deployed functions.
 
-Point a Stripe webhook endpoint at the deployed `stripe-webhook` function URL
-and subscribe to `checkout.session.completed`.
+### Stripe (optional, for later)
 
-## 4. Roles
+The `create-checkout-session` and `stripe-webhook` functions are kept for when
+real payments are wired up. They are **not** required for the cash flow above.
+When ready:
+
+```
+supabase functions deploy create-checkout-session
+supabase functions deploy stripe-webhook --no-verify-jwt
+supabase secrets set STRIPE_SECRET_KEY=sk_... STRIPE_WEBHOOK_SECRET=whsec_...
+```
+
+Then point a Stripe webhook at the deployed `stripe-webhook` URL (subscribe to
+`checkout.session.completed`) and switch `Checkout.tsx` back to invoking
+`create-checkout-session`.
+
+## 5. Roles
 
 - **CUSTOMER / VENDOR**: created via app registration (Supabase Auth). The
   `handle_new_user` trigger creates a `profiles` row. Applying for a store
@@ -64,5 +76,6 @@ and subscribe to `checkout.session.completed`.
 ## Migration status
 
 The legacy `server/` (Express + Prisma) is intentionally kept until the
-Supabase flow is verified end-to-end (see Phase 7). Once verified, the Express
-server and Prisma can be removed; Stripe is already handled by Edge Functions.
+Supabase flow is verified end-to-end. Checkout currently uses the cash
+`place_order` RPC; Stripe Edge Functions are kept for later. Once the Supabase
+flow is verified, the Express server and Prisma can be removed.
