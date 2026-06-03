@@ -6,7 +6,7 @@
 --
 -- How to use:
 --   1. First register/login with the vendor email in the app:
---        welde.senu@gmail.
+--        welde.senu@gmail.com
 --   2. Then run this file (supabase/seed.sql) in the Supabase SQL Editor.
 --   3. The script creates 6 demo stores and 18 products per store.
 --   4. Total expected product count: 108 products (6 stores × 18 products).
@@ -18,7 +18,7 @@
 
 do $$
 declare
-  demo_vendor_email text := 'welde.senu@gmail.';
+  demo_vendor_email text := 'welde.senu@gmail.com';
   demo_owner_id uuid;
   new_store_id uuid;
   i int;
@@ -123,7 +123,7 @@ begin
   limit 1;
 
   if demo_owner_id is null then
-    raise exception 'No profile found for welde.senu@gmail. Create this vendor account through the app first, then re-run seed.sql.';
+    raise exception 'No profile found for welde.senu@gmail.com. Create this vendor account through the app first, then re-run seed.sql.';
   end if;
 
   -- Promote to VENDOR if needed.
