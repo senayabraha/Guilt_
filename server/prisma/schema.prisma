@@ -7,6 +7,18 @@ datasource db {
     provider = "postgresql"
 }
 
+enum UserRole {
+    CUSTOMER
+    VENDOR
+    ADMIN
+}
+
+enum StoreStatus {
+    PENDING
+    APPROVED
+    SUSPENDED
+}
+
 model User {
     id        String    @id @default(uuid())
     name      String
@@ -14,8 +26,10 @@ model User {
     password  String
     phone     String?   @default("")
     avatar    String?   @default("")
+    role      UserRole  @default(CUSTOMER)
     addresses Address[]
     orders    Order[]
+    stores    Store[]
     createdAt DateTime  @default(now())
     updatedAt DateTime  @updatedAt
 }
@@ -36,8 +50,39 @@ model Address {
     updatedAt DateTime @updatedAt
 }
 
+model Store {
+    id             String      @id @default(uuid())
+    ownerId        String
+    owner          User        @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+    name           String
+    description    String?     @default("")
+    phone          String?     @default("")
+    email          String?     @default("")
+    logo           String?     @default("")
+    coverImage     String?     @default("")
+    address        String
+    city           String
+    state          String
+    zip            String?     @default("")
+    lat            Float?
+    lng            Float?
+    categories     String[]    @default([])
+    status         StoreStatus @default(PENDING)
+    isOpen         Boolean     @default(true)
+    deliveryRadius Float?      @default(5)
+    deliveryFee    Float?      @default(1.99)
+    minOrder       Float?      @default(0)
+    commissionRate Float?      @default(0.15)
+    products       Product[]
+    orders         Order[]
+    createdAt      DateTime    @default(now())
+    updatedAt      DateTime    @updatedAt
+}
+
 model Product {
     id            String   @id @default(uuid())
+    storeId       String?
+    store         Store?   @relation(fields: [storeId], references: [id], onDelete: Cascade)
     name          String
     description   String?  @default("")
     price         Float
@@ -47,6 +92,7 @@ model Product {
     unit          String?  @default("piece")
     stock         Int?     @default(0)
     isOrganic     Boolean? @default(false)
+    isActive      Boolean  @default(true)
     rating        Float?   @default(0)
     reviewCount   Int?     @default(0)
     createdAt     DateTime @default(now())
@@ -57,6 +103,8 @@ model Order {
     id              String @id @default(uuid())
     userId          String
     user            User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+    storeId         String?
+    store           Store? @relation(fields: [storeId], references: [id], onDelete: SetNull)
     items           Json
     shippingAddress Json
     paymentMethod   String @default("card")
