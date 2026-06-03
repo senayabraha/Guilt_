@@ -31,7 +31,7 @@ export default function VendorApply({ embedded, onApplied }: Props) {
     state: "",
     zip: "",
     deliveryRadius: "5",
-    deliveryFee: "1.99",
+    deliveryFee: "50",
     minOrder: "0",
   });
   const [categories, setCategories] = useState<string[]>([]);
@@ -205,7 +205,7 @@ export default function VendorApply({ embedded, onApplied }: Props) {
         </div>
         <div>
           <label className="block text-sm font-medium text-zinc-700 mb-2">
-            Delivery Fee ($)
+            Delivery Fee (ETB)
           </label>
           <input
             type="number"
@@ -218,7 +218,7 @@ export default function VendorApply({ embedded, onApplied }: Props) {
         </div>
         <div>
           <label className="block text-sm font-medium text-zinc-700 mb-2">
-            Minimum Order ($)
+            Minimum Order (ETB)
           </label>
           <input
             type="number"

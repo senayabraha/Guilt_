@@ -16,10 +16,10 @@ import CheckoutPayment from "../components/Checkout/CheckoutPayment";
 import CheckoutReview from "../components/Checkout/CheckoutReview";
 import { getMyAddresses } from "../lib/db/addresses";
 import { placeOrder } from "../lib/db/orders";
+import { formatCurrency } from "../lib/format";
 
 const Checkout = () => {
   const navigate = useNavigate();
-  const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "₹";
 
   const { items, cartTotal, clearCart } = useCart();
 
@@ -182,8 +182,7 @@ const Checkout = () => {
                   Subtotal ({items.length} items)
                 </span>
                 <span>
-                  {currency}
-                  {cartTotal.toFixed(2)}
+                  {formatCurrency(cartTotal)}
                 </span>
               </div>
 
@@ -193,7 +192,7 @@ const Checkout = () => {
                   {deliveryFee === 0 ? (
                     <span className="text-app-success">Free</span>
                   ) : (
-                    `${currency}${deliveryFee.toFixed(2)}`
+                    `${formatCurrency(deliveryFee)}`
                   )}
                 </span>
               </div>
@@ -201,16 +200,14 @@ const Checkout = () => {
               <div className="flex justify-between">
                 <span className="text-app-text-light">Tax</span>
                 <span>
-                  {currency}
-                  {tax.toFixed(2)}
+                  {formatCurrency(tax)}
                 </span>
               </div>
 
               <div className="flex justify-between pt-3 border-t border-app-border text-base font-semibold">
                 <span>Total</span>
                 <span className="text-app-green">
-                  {currency}
-                  {total.toFixed(2)}
+                  {formatCurrency(total)}
                 </span>
               </div>
             </div>

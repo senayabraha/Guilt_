@@ -5,6 +5,7 @@ import Loading from "../../components/Loading";
 import { statusColors } from "../../assets/assets";
 import { getMyStore } from "../../lib/db/stores";
 import { getStoreOrders, updateOrderStatus } from "../../lib/db/orders";
+import { formatCurrency } from "../../lib/format";
 
 const VENDOR_STATUSES = ["Confirmed", "Packed", "Ready for Pickup", "Cancelled"];
 const FILTERS = [
@@ -20,8 +21,6 @@ const FILTERS = [
 ];
 
 export default function VendorOrders() {
-  const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "$";
-
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
@@ -125,8 +124,7 @@ export default function VendorOrders() {
                         </p>
                       </td>
                       <td className="px-6 py-4 font-medium">
-                        {currency}
-                        {order.total?.toFixed(2)}
+                        {formatCurrency(order.total)}
                       </td>
                       <td className="px-6 py-4">
                         <span

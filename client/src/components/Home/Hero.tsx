@@ -31,7 +31,7 @@ const Hero = () => {
 
           <div className="flex flex-wrap gap-3">
             <Link
-              to="/products"
+              to="/stores"
               className="px-7 py-3 bg-orange-400 text-white font-semibold rounded-full hover:bg-orange-500 transition-all flex-center gap-2 active:scale-[0.98]"
             >
               Start Shopping <ArrowRightIcon className="size-4" />
@@ -45,7 +45,7 @@ const Hero = () => {
             </Link>
 
             <Link
-              to="/delivery/login"
+              to="/delivery"
               className="px-7 py-3 text-white/90 font-semibold rounded-full hover:text-white transition-all"
             >
               Deliver With Us

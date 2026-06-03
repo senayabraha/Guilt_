@@ -11,6 +11,7 @@ import Loading from "../../components/Loading";
 import { statusColors } from "../../assets/assets";
 import { supabase } from "../../lib/supabase";
 import { getAllOrders } from "../../lib/db/orders";
+import { formatCurrency } from "../../lib/format";
 
 interface Stats {
   totalOrders: number;
@@ -21,8 +22,6 @@ interface Stats {
 }
 
 export default function AdminDashboard() {
-  const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "$";
-
   const [stats, setStats] = useState<Stats | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -154,8 +153,7 @@ export default function AdminDashboard() {
                       {order.items?.length || 0} items
                     </td>
                     <td className="px-6 py-4 font-medium">
-                      {currency}
-                      {order.total?.toFixed(2)}
+                      {formatCurrency(order.total)}
                     </td>
                     <td className="px-6 py-4">
                       <span

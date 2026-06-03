@@ -17,9 +17,9 @@ import Loading from "../components/Loading";
 import DummyReviewsSection from "../assets/DummyReviewsSection";
 import ProductCard from "../components/ProductCard";
 import { getProduct, getPublicProducts } from "../lib/db/products";
+import { formatCurrency } from "../lib/format";
 
 const ProductPage = () => {
-  const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "$";
   const { id } = useParams();
   const navigate = useNavigate();
   const { items, addToCart, updateQuantity, removeFromCart } = useCart();
@@ -168,14 +168,12 @@ const ProductPage = () => {
               {/* Price */}
               <div className="flex items-baseline gap-3 mb-5">
                 <span className="text-3xl md:text-4xl font-semibold text-app-green">
-                  {currency}
-                  {product.price.toFixed(2)}
+                  {formatCurrency(product.price)}
                 </span>
 
                 {product.originalPrice > product.price && (
                   <span className="text-lg text-app-text-light line-through">
-                    {currency}
-                    {product.originalPrice.toFixed(2)}
+                    {formatCurrency(product.originalPrice)}
                   </span>
                 )}
               </div>

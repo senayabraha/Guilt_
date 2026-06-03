@@ -1,5 +1,6 @@
 import { CheckIcon, TruckIcon } from "lucide-react";
 import type { Address } from "../../types";
+import { formatCurrency } from "../../lib/format";
 
 interface CheckoutReviewProps {
   address: Address;
@@ -16,8 +17,6 @@ export default function CheckoutReview({
   loading,
   total,
 }: CheckoutReviewProps) {
-  const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "$";
-
   return (
     <div className="bg-white rounded-2xl p-6 animate-fade-in">
       <h2 className="text-lg font-semibold text-app-green mb-5 flex items-center gap-2">
@@ -56,8 +55,7 @@ export default function CheckoutReview({
               </p>
             </div>
             <span className="text-sm font-semibold">
-              {currency}
-              {(item.product.price * item.quantity).toFixed(2)}
+              {formatCurrency(item.product.price * item.quantity)}
             </span>
           </div>
         ))}
@@ -70,7 +68,7 @@ export default function CheckoutReview({
       >
         {loading
           ? "Placing Order..."
-          : `Place Order — ${currency}${total.toFixed(2)}`}
+          : `Place Order — ${formatCurrency(total)}`}
       </button>
     </div>
   );

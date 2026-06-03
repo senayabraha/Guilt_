@@ -8,9 +8,9 @@ import { statusColors } from "../assets/assets";
 import Loading from "../components/Loading";
 import { getMyOrders } from "../lib/db/orders";
 import type { Order } from "../types";
+import { formatCurrency } from "../lib/format";
 
 const MyOrders = () => {
-  const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "$";
 
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,8 +146,7 @@ const MyOrders = () => {
                   </span>
 
                   <span className="font-semibold text-app-green">
-                    {currency}
-                    {order.total.toFixed(2)}
+                    {formatCurrency(order.total)}
                   </span>
                 </div>
               </Link>

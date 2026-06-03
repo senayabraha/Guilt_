@@ -10,9 +10,9 @@ import {
   assignDeliveryPartner,
 } from "../../lib/db/orders";
 import { getAllPartners } from "../../lib/db/deliveryPartners";
+import { formatCurrency } from "../../lib/format";
 
 export default function AdminOrders() {
-  const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "$";
 
   const [orders, setOrders] = useState<any[]>([]);
   const [partners, setPartners] = useState<DeliveryPartner[]>([]);
@@ -144,8 +144,7 @@ export default function AdminOrders() {
                       </p>
                     </td>
                     <td className="px-6 py-4 font-medium">
-                      {currency}
-                      {order.total.toFixed(2)}
+                      {formatCurrency(order.total)}
                     </td>
                     <td className="px-6 py-4">
                       {order.deliveryPartner ? (

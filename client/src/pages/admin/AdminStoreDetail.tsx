@@ -14,6 +14,7 @@ import toast from "react-hot-toast";
 import Loading from "../../components/Loading";
 import { statusColors } from "../../assets/assets";
 import { getAdminStore, setStoreStatus } from "../../lib/db/stores";
+import { formatCurrency } from "../../lib/format";
 
 const storeStatusColors: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-700",
@@ -23,8 +24,6 @@ const storeStatusColors: Record<string, string> = {
 
 export default function AdminStoreDetail() {
   const { id } = useParams();
-  const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "$";
-
   const [store, setStore] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
@@ -185,9 +184,8 @@ export default function AdminStoreDetail() {
             {store._count?.orders ?? store.orders?.length ?? 0}
           </p>
           <p className="text-xs text-zinc-500 mt-1">
-            Delivery fee {currency}
-            {(store.deliveryFee ?? 0).toFixed(2)} • Min {currency}
-            {(store.minOrder ?? 0).toFixed(2)}
+            Delivery fee {formatCurrency(store.deliveryFee ?? 0)} • Min{" "}
+            {formatCurrency(store.minOrder ?? 0)}
           </p>
         </div>
       </div>
@@ -230,8 +228,7 @@ export default function AdminStoreDetail() {
                       </div>
                     </td>
                     <td className="px-6 py-3">
-                      {currency}
-                      {p.price.toFixed(2)}
+                      {formatCurrency(p.price)}
                     </td>
                     <td className="px-6 py-3">{p.stock ?? 0}</td>
                     <td className="px-6 py-3">
@@ -278,8 +275,7 @@ export default function AdminStoreDetail() {
                       #{o.id.slice(-6).toUpperCase()}
                     </td>
                     <td className="px-6 py-3 font-medium">
-                      {currency}
-                      {o.total.toFixed(2)}
+                      {formatCurrency(o.total)}
                     </td>
                     <td className="px-6 py-3">
                       <span

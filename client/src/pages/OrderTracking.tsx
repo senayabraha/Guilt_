@@ -8,9 +8,9 @@ import OrderOTP from "../components/OrderTracking/OrderOTP";
 import LiveMap from "../components/OrderTracking/LiveMap";
 import OrderTimeLine from "../components/OrderTracking/OrderTimeLine";
 import { getOrder, getOrderLocation } from "../lib/db/orders";
+import { formatCurrency } from "../lib/format";
 
 const OrderTracking = () => {
-  const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "₹";
   const { id } = useParams();
   const navigate = useNavigate();
   const [order, setOrder] = useState<Order | null>(null);
@@ -178,8 +178,7 @@ const OrderTracking = () => {
                       </p>
                     </div>
                     <span className="text-sm font-semibold">
-                      {currency}
-                      {(item.price * item.quantity).toFixed(2)}
+                      {formatCurrency(item.price * item.quantity)}
                     </span>
                   </div>
                 ))}
@@ -189,8 +188,7 @@ const OrderTracking = () => {
                 <div className="flex justify-between">
                   <span className="text-app-text-light">Subtotal</span>
                   <span>
-                    {currency}
-                    {order?.subtotal.toFixed(2)}
+                    {formatCurrency(order?.subtotal)}
                   </span>
                 </div>
 
@@ -199,23 +197,21 @@ const OrderTracking = () => {
                   <span>
                     {order?.deliveryFee === 0
                       ? "Free"
-                      : `${currency}${order?.deliveryFee.toFixed(2)}`}
+                      : `${formatCurrency(order?.deliveryFee)}`}
                   </span>
                 </div>
 
                 <div className="flex justify-between">
                   <span className="text-app-text-light">Tax</span>
                   <span>
-                    {currency}
-                    {order?.tax.toFixed(2)}
+                    {formatCurrency(order?.tax)}
                   </span>
                 </div>
 
                 <div className="flex justify-between pt-2 border-t border-app-border font-semibold text-app-green">
                   <span>Total</span>
                   <span>
-                    {currency}
-                    {order?.total.toFixed(2)}
+                    {formatCurrency(order?.total)}
                   </span>
                 </div>
               </div>

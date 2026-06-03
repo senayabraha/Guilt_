@@ -16,7 +16,6 @@ import bakery from "./bakery.png";
 import drinks from "./drinks.png";
 import pantry_staples from "./pantry_staples.png";
 import snacks from "./snacks.png";
-import frozen_foods from "./frozen_foods.png";
 import personal_care from "./personal_care.png";
 import baby_care from "./baby_care.png";
 import meat_seafood from "./meat_seafood.png";
@@ -32,15 +31,17 @@ export const categoriesData = [
     name: "Fruits & Vegetables",
     image: fruits_vegetables,
   },
-  { slug: "personal-care", name: "Personal Care", image: personal_care },
-  { slug: "pantry-staples", name: "Pantry Staples", image: pantry_staples },
-  { slug: "bakery", name: "Bakery", image: bakery },
-  { slug: "beverages", name: "Beverages", image: drinks },
-  { slug: "meat-seafood", name: "Meat & Seafood", image: meat_seafood },
-  { slug: "snacks", name: "Snacks", image: snacks },
-  { slug: "frozen-foods", name: "Frozen Foods", image: frozen_foods },
-  { slug: "baby-care", name: "Baby Care", image: baby_care },
   { slug: "dairy-eggs", name: "Dairy & Eggs", image: dairy_eggs },
+  { slug: "bakery", name: "Bakery", image: bakery },
+  { slug: "pantry-staples", name: "Pantry Staples", image: pantry_staples },
+  { slug: "beverages", name: "Drinks", image: drinks },
+  { slug: "snacks", name: "Snacks", image: snacks },
+  { slug: "baby-care", name: "Baby Care", image: baby_care },
+  { slug: "personal-care", name: "Personal Care", image: personal_care },
+  { slug: "household-essentials", name: "Household Essentials", image: "" },
+  { slug: "coffee-spices", name: "Coffee & Spices", image: "" },
+  { slug: "injera-local-foods", name: "Injera & Local Foods", image: "" },
+  { slug: "meat-seafood", name: "Meat & Seafood", image: meat_seafood },
 ];
 
 export const heroSectionData = {

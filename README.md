@@ -40,6 +40,25 @@ essentials, and track deliveries in real time — all from one place.
 
 ---
 
+## Marketplace experience
+
+Zembil Market is designed as a real shopping tool, not just a landing page. The
+homepage and store pages draw on proven marketplace usability patterns:
+
+- **Search** products and stores from a prominent search bar near the top.
+- **Store discovery** — "Shop by store" strip and "Stores near you in Addis
+  Ababa" with local store cards.
+- **Delivery estimates**, neighborhood/city, open-now status, and delivery fee
+  on every store card.
+- **Today's deals** — discounted products (via `original_price` vs `price`).
+- **Local store browsing** across Bole, Kazanchis, CMC, Piassa, Megenagna,
+  Sarbet, and more.
+- **Location selector** — a "Delivering to …" Addis Ababa area indicator.
+- **ETB pricing** — money is displayed in Ethiopian Birr (e.g. `ETB 250`) via a
+  shared `formatCurrency` helper.
+
+---
+
 ## Current Stack
 
 The customer-facing app runs on a modern, Supabase-backed stack:

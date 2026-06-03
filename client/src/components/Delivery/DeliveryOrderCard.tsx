@@ -8,6 +8,7 @@ import {
 } from "lucide-react";
 import type { Order } from "../../types";
 import { statusColors } from "../../assets/assets";
+import { formatCurrency } from "../../lib/format";
 
 interface DeliveryOrderCardProps {
   order: Order;
@@ -24,8 +25,6 @@ export default function DeliveryOrderCard({
   setOtpModal,
   setCancelModal,
 }: DeliveryOrderCardProps) {
-  const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "$";
-
   const user =
     typeof order.user === "object"
       ? order.user
@@ -49,8 +48,7 @@ export default function DeliveryOrderCard({
           </span>
         </div>
         <span className="text-sm font-semibold text-zinc-900">
-          {currency}
-          {order.total.toFixed(2)}
+          {formatCurrency(order.total)}
         </span>
       </div>
 

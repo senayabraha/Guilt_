@@ -13,6 +13,7 @@ import { statusColors } from "../../assets/assets";
 import { getMyStore } from "../../lib/db/stores";
 import { getStoreProducts } from "../../lib/db/products";
 import { getStoreOrders } from "../../lib/db/orders";
+import { formatCurrency } from "../../lib/format";
 import VendorApply from "./VendorApply";
 
 const LOW_STOCK_THRESHOLD = 5;
@@ -31,7 +32,6 @@ const storeStatusColors: Record<string, string> = {
 };
 
 export default function VendorDashboard() {
-  const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "$";
 
   const [loading, setLoading] = useState(true);
   const [hasStore, setHasStore] = useState(false);
@@ -118,7 +118,7 @@ export default function VendorDashboard() {
   const cards = [
     {
       label: "Today's Revenue",
-      value: `${currency}${stats.todayRevenue.toFixed(2)}`,
+      value: `${formatCurrency(stats.todayRevenue)}`,
       icon: DollarSignIcon,
     },
     {
@@ -234,8 +234,7 @@ export default function VendorDashboard() {
                       {order.items?.length || 0} items
                     </td>
                     <td className="px-6 py-4 font-medium">
-                      {currency}
-                      {order.total?.toFixed(2)}
+                      {formatCurrency(order.total)}
                     </td>
                     <td className="px-6 py-4">
                       <span

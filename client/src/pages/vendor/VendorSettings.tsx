@@ -238,7 +238,7 @@ export default function VendorSettings() {
           </div>
           <div>
             <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Delivery Fee ($)
+              Delivery Fee (ETB)
             </label>
             <input
               type="number"
@@ -251,7 +251,7 @@ export default function VendorSettings() {
           </div>
           <div>
             <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Minimum Order ($)
+              Minimum Order (ETB)
             </label>
             <input
               type="number"

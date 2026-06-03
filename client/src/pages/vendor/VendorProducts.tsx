@@ -7,10 +7,9 @@ import type { Product } from "../../types";
 import Loading from "../../components/Loading";
 import { getMyStore } from "../../lib/db/stores";
 import { getStoreProducts, updateProduct } from "../../lib/db/products";
+import { formatCurrency } from "../../lib/format";
 
 export default function VendorProducts() {
-  const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "$";
-
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [stockEdits, setStockEdits] = useState<Record<string, string>>({});
@@ -122,8 +121,7 @@ export default function VendorProducts() {
                       </div>
                     </td>
                     <td className="px-6 py-4 font-medium">
-                      {currency}
-                      {product.price.toFixed(2)}
+                      {formatCurrency(product.price)}
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-1.5">

@@ -174,7 +174,7 @@ export default function VendorProductForm() {
             </div>
             <div>
               <label className="block text-sm font-medium text-zinc-700 mb-2">
-                Price ($)
+                Price (ETB)
               </label>
               <input
                 required
@@ -190,7 +190,7 @@ export default function VendorProductForm() {
             </div>
             <div>
               <label className="block text-sm font-medium text-zinc-700 mb-2">
-                Original Price ($) - Optional
+                Original Price (ETB) - Optional
               </label>
               <input
                 type="number"

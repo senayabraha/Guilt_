@@ -13,10 +13,10 @@ import type { Product, Store } from "../types";
 import ProductCard from "../components/ProductCard";
 import Loading from "../components/Loading";
 import { getPublicStore, getPublicStoreProducts } from "../lib/db/stores";
+import { formatCurrency } from "../lib/format";
 
 const StoreDetail = () => {
   const { id } = useParams();
-  const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "$";
 
   const [store, setStore] = useState<Store | null>(null);
   const [products, setProducts] = useState<Product[]>([]);
@@ -150,12 +150,10 @@ const StoreDetail = () => {
                 </span>
               )}
               <span className="flex items-center gap-1">
-                <BikeIcon className="size-3.5" /> {currency}
-                {(store.deliveryFee ?? 0).toFixed(2)} delivery
+                <BikeIcon className="size-3.5" /> {formatCurrency(store.deliveryFee ?? 0)} delivery
               </span>
               <span>
-                Min order {currency}
-                {(store.minOrder ?? 0).toFixed(2)}
+                Min order {formatCurrency(store.minOrder ?? 0)}
               </span>
             </div>
           </div>
