@@ -5,7 +5,8 @@ import toast from "react-hot-toast";
 
 import type { Product } from "../../types";
 import Loading from "../../components/Loading";
-import api from "../../config/api";
+import { getMyStore } from "../../lib/db/stores";
+import { getStoreProducts, updateProduct } from "../../lib/db/products";
 
 export default function VendorProducts() {
   const currency = import.meta.env.VITE_CURRENCY_SYMBOL || "$";
@@ -16,10 +17,14 @@ export default function VendorProducts() {
 
   const fetchProducts = async () => {
     try {
-      const { data } = await api.get("/vendor/products");
-      setProducts(data.products);
+      const store = await getMyStore();
+      if (!store) {
+        setProducts([]);
+        return;
+      }
+      setProducts(await getStoreProducts(store.id));
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to load products");
+      toast.error(error?.message || "Failed to load products");
     } finally {
       setLoading(false);
     }
@@ -31,7 +36,7 @@ export default function VendorProducts() {
 
   const toggleActive = async (product: Product) => {
     try {
-      await api.put(`/vendor/products/${product.id}`, {
+      await updateProduct(product.id || product._id, {
         isActive: !product.isActive,
       });
       toast.success(
@@ -39,7 +44,7 @@ export default function VendorProducts() {
       );
       fetchProducts();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to update product");
+      toast.error(error?.message || "Failed to update product");
     }
   };
 
@@ -47,7 +52,7 @@ export default function VendorProducts() {
     const value = stockEdits[product.id || product._id];
     if (value === undefined) return;
     try {
-      await api.put(`/vendor/products/${product.id}`, { stock: Number(value) });
+      await updateProduct(product.id || product._id, { stock: Number(value) });
       toast.success("Stock updated");
       setStockEdits((prev) => {
         const next = { ...prev };
@@ -56,7 +61,7 @@ export default function VendorProducts() {
       });
       fetchProducts();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to update stock");
+      toast.error(error?.message || "Failed to update stock");
     }
   };
 

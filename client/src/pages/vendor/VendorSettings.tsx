@@ -3,7 +3,7 @@ import toast from "react-hot-toast";
 
 import { categoriesData } from "../../assets/assets";
 import Loading from "../../components/Loading";
-import api from "../../config/api";
+import { getMyStore, updateMyStore } from "../../lib/db/stores";
 
 const storeStatusColors: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-700",
@@ -15,6 +15,7 @@ export default function VendorSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
+  const [storeId, setStoreId] = useState("");
   const [categories, setCategories] = useState<string[]>([]);
   const [form, setForm] = useState({
     name: "",
@@ -36,9 +37,13 @@ export default function VendorSettings() {
   useEffect(() => {
     const fetchStore = async () => {
       try {
-        const { data } = await api.get("/vendor/store");
-        const s = data.store;
+        const s = await getMyStore();
+        if (!s) {
+          toast.error("No store found");
+          return;
+        }
         setStatus(s.status);
+        setStoreId(s.id);
         setCategories(s.categories || []);
         setForm({
           name: s.name || "",
@@ -76,18 +81,13 @@ export default function VendorSettings() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!storeId) return;
     setSaving(true);
     try {
-      await api.put("/vendor/store", {
-        ...form,
-        deliveryRadius: Number(form.deliveryRadius),
-        deliveryFee: Number(form.deliveryFee),
-        minOrder: Number(form.minOrder),
-        categories,
-      });
+      await updateMyStore(storeId, { ...form, categories });
       toast.success("Store settings updated");
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to update store");
+      toast.error(error?.message || "Failed to update store");
     } finally {
       setSaving(false);
     }

@@ -5,7 +5,9 @@ import toast from "react-hot-toast";
 
 import { categoriesData } from "../../assets/assets";
 import Loading from "../../components/Loading";
-import api from "../../config/api";
+import { getMyStore } from "../../lib/db/stores";
+import { getStoreProducts, createProduct, updateProduct } from "../../lib/db/products";
+import { uploadProductImage } from "../../lib/storage";
 
 export default function VendorProductForm() {
   const { id } = useParams();
@@ -33,10 +35,9 @@ export default function VendorProductForm() {
     const fetchData = async () => {
       if (!isEdit) return;
       try {
-        const { data } = await api.get("/vendor/products");
-        const p = (data.products || []).find(
-          (prod: any) => prod.id === id || prod._id === id,
-        );
+        const store = await getMyStore();
+        const products = store ? await getStoreProducts(store.id) : [];
+        const p = products.find((prod) => prod.id === id || prod._id === id);
         if (!p) {
           toast.error("Product not found");
           navigate("/vendor/products");
@@ -70,10 +71,7 @@ export default function VendorProductForm() {
       let finalImageUrl = formData.image;
 
       if (imageFile) {
-        const upload = new FormData();
-        upload.append("image", imageFile);
-        const { data } = await api.post("/upload", upload);
-        finalImageUrl = data.url;
+        finalImageUrl = await uploadProductImage(imageFile);
       }
 
       if (!finalImageUrl) {
@@ -82,7 +80,6 @@ export default function VendorProductForm() {
         return;
       }
 
-      // Note: storeId is never sent — the backend derives it from the vendor's store.
       const payload = {
         name: formData.name,
         description: formData.description,
@@ -98,16 +95,23 @@ export default function VendorProductForm() {
         isActive: formData.isActive,
       };
 
-      if (isEdit) {
-        await api.put(`/vendor/products/${id}`, payload);
+      if (isEdit && id) {
+        // store_id is never passed on update.
+        await updateProduct(id, payload);
         toast.success("Product updated successfully");
       } else {
-        await api.post("/vendor/products", payload);
+        const store = await getMyStore();
+        if (!store) {
+          toast.error("You need an approved store before adding products");
+          setSaving(false);
+          return;
+        }
+        await createProduct(payload, store.id);
         toast.success("Product created successfully");
       }
       navigate("/vendor/products");
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to save product");
+      toast.error(error?.message || "Failed to save product");
     } finally {
       setSaving(false);
     }

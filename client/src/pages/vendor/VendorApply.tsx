@@ -5,7 +5,8 @@ import toast from "react-hot-toast";
 
 import { categoriesData } from "../../assets/assets";
 import { useAuth } from "../../context/AuthContext";
-import api from "../../config/api";
+import { applyForStore } from "../../lib/db/stores";
+import { becomeVendor } from "../../lib/db/profiles";
 
 interface Props {
   /** Render without the page wrapper (e.g. embedded on the dashboard). */
@@ -15,7 +16,7 @@ interface Props {
 
 export default function VendorApply({ embedded, onApplied }: Props) {
   const navigate = useNavigate();
-  const { updateUser } = useAuth();
+  const { user, updateUser } = useAuth();
 
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
@@ -50,24 +51,18 @@ export default function VendorApply({ embedded, onApplied }: Props) {
       toast.error("Store name, address, city, and state are required");
       return;
     }
+    if (!user) return;
     setSaving(true);
     try {
-      await api.post("/stores/apply", {
-        ...form,
-        deliveryRadius: Number(form.deliveryRadius),
-        deliveryFee: Number(form.deliveryFee),
-        minOrder: Number(form.minOrder),
-        categories,
-      });
-      // Applying promotes the user to a vendor on the backend.
+      await applyForStore({ ...form, categories }, user.id || user._id);
+      // Applying promotes the user from CUSTOMER to VENDOR.
+      await becomeVendor(user.id || user._id);
       updateUser({ role: "VENDOR" });
       toast.success("Application submitted! Your store is pending approval.");
       onApplied?.();
       navigate("/vendor");
     } catch (error: any) {
-      toast.error(
-        error?.response?.data?.message || "Failed to submit application",
-      );
+      toast.error(error?.message || "Failed to submit application");
     } finally {
       setSaving(false);
     }

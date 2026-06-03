@@ -3,7 +3,8 @@ import toast from "react-hot-toast";
 
 import Loading from "../../components/Loading";
 import { statusColors } from "../../assets/assets";
-import api from "../../config/api";
+import { getMyStore } from "../../lib/db/stores";
+import { getStoreOrders, updateOrderStatus } from "../../lib/db/orders";
 
 const VENDOR_STATUSES = ["Confirmed", "Packed", "Ready for Pickup", "Cancelled"];
 const FILTERS = [
@@ -28,12 +29,14 @@ export default function VendorOrders() {
   const fetchOrders = async (status = filter) => {
     setLoading(true);
     try {
-      const params = new URLSearchParams();
-      if (status && status !== "all") params.set("status", status);
-      const { data } = await api.get(`/vendor/orders?${params.toString()}`);
-      setOrders(data.orders);
+      const store = await getMyStore();
+      if (!store) {
+        setOrders([]);
+        return;
+      }
+      setOrders(await getStoreOrders(store.id, status));
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to load orders");
+      toast.error(error?.message || "Failed to load orders");
     } finally {
       setLoading(false);
     }
@@ -45,12 +48,14 @@ export default function VendorOrders() {
   }, [filter]);
 
   const updateStatus = async (id: string, status: string) => {
+    // Vendor UI only offers Confirmed/Packed/Ready for Pickup/Cancelled.
+    if (!VENDOR_STATUSES.includes(status)) return;
     try {
-      await api.put(`/vendor/orders/${id}/status`, { status });
+      await updateOrderStatus(id, status);
       toast.success(`Order marked ${status}`);
       fetchOrders(filter);
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to update status");
+      toast.error(error?.message || "Failed to update status");
     }
   };
 

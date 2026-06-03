@@ -10,7 +10,9 @@ import {
 import type { Store } from "../../types";
 import Loading from "../../components/Loading";
 import { statusColors } from "../../assets/assets";
-import api from "../../config/api";
+import { getMyStore } from "../../lib/db/stores";
+import { getStoreProducts } from "../../lib/db/products";
+import { getStoreOrders } from "../../lib/db/orders";
 import VendorApply from "./VendorApply";
 
 const LOW_STOCK_THRESHOLD = 5;
@@ -45,17 +47,18 @@ export default function VendorDashboard() {
   const load = async () => {
     setLoading(true);
     try {
-      const { data: storeData } = await api.get("/vendor/store");
-      setStore(storeData.store);
+      const storeData = await getMyStore();
+      if (!storeData) {
+        setHasStore(false);
+        return;
+      }
+      setStore(storeData);
       setHasStore(true);
 
-      const [productsRes, ordersRes] = await Promise.all([
-        api.get("/vendor/products"),
-        api.get("/vendor/orders"),
+      const [products, orders] = await Promise.all([
+        getStoreProducts(storeData.id),
+        getStoreOrders(storeData.id),
       ]);
-
-      const products = productsRes.data.products || [];
-      const orders = ordersRes.data.orders || [];
 
       const today = new Date().toDateString();
       const todayRevenue = orders
