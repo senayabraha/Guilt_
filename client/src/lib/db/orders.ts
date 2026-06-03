@@ -8,6 +8,20 @@ const ORDER_FULL =
 // Hide unpaid card orders (checkout abandoned before payment).
 const PAID_OR_NOT_CARD = "payment_method.neq.card,is_paid.eq.true";
 
+// Cash/test checkout. Validates, creates the order, and decrements stock via
+// the place_order RPC (security definer). Returns the new order id.
+export async function placeOrder(params: {
+  items: { product: string; quantity: number }[];
+  shippingAddress: any;
+}): Promise<string> {
+  const { data, error } = await supabase.rpc("place_order", {
+    cart: params.items,
+    shipping: params.shippingAddress ?? {},
+  });
+  if (error) throw error;
+  return data as string;
+}
+
 export async function getMyOrders(status?: string): Promise<Order[]> {
   let query = supabase
     .from("orders")

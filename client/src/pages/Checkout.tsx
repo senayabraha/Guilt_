@@ -14,8 +14,8 @@ import type { Address } from "../types";
 import CheckoutAddress from "../components/Checkout/CheckoutAddress";
 import CheckoutPayment from "../components/Checkout/CheckoutPayment";
 import CheckoutReview from "../components/Checkout/CheckoutReview";
-import { supabase } from "../lib/supabase";
 import { getMyAddresses } from "../lib/db/addresses";
+import { placeOrder } from "../lib/db/orders";
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -55,31 +55,19 @@ const Checkout = () => {
   const handlePlaceOrder = async () => {
     setLoading(true);
     try {
-      const orderData = {
+      // Temporary cash/test flow: validation, totals, order creation, and stock
+      // decrement happen server-side in the place_order RPC. No Stripe required.
+      const orderId = await placeOrder({
         items: items.map((item) => ({
           product: item.product.id || item.product._id,
           quantity: item.quantity,
         })),
         shippingAddress: address,
-        paymentMethod,
-      };
+      });
 
-      // Order validation, totals, and (for card) Stripe checkout all happen
-      // server-side in the Supabase Edge Function.
-      const { data, error } = await supabase.functions.invoke(
-        "create-checkout-session",
-        { body: orderData },
-      );
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-
-      if (data?.url) {
-        window.location.href = data.url;
-        return;
-      }
       clearCart();
       toast.success("Order placed successfully!");
-      navigate(`/orders/${data.orderId}`);
+      navigate(`/orders/${orderId}`);
     } catch (error: any) {
       toast.error(error?.message || "Failed to place order");
     } finally {

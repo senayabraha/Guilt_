@@ -459,3 +459,110 @@ begin
   where id = order_uuid;
 end;
 $$;
+
+-- Cash/test checkout: validates the cart, enforces a single store, computes
+-- totals, creates the order for the current user, and decrements stock — all
+-- server-side (security definer) so stock updates aren't blocked by RLS.
+-- cart: jsonb array of { "product": uuid, "quantity": int }.
+create or replace function public.place_order(cart jsonb, shipping jsonb)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  uid uuid := auth.uid();
+  item jsonb;
+  prod public.products%rowtype;
+  store_rec public.stores%rowtype;
+  first_set boolean := false;
+  first_store uuid;
+  order_items jsonb := '[]'::jsonb;
+  subtotal numeric := 0;
+  delivery_fee numeric := 0;
+  tax numeric := 0;
+  total numeric := 0;
+  new_order_id uuid;
+  qty int;
+begin
+  if uid is null then
+    raise exception 'You must be signed in to place an order';
+  end if;
+  if cart is null or jsonb_array_length(cart) = 0 then
+    raise exception 'No order items';
+  end if;
+
+  for item in select * from jsonb_array_elements(cart)
+  loop
+    qty := (item->>'quantity')::int;
+    select * into prod from public.products where id = (item->>'product')::uuid;
+
+    if prod.id is null then
+      raise exception 'One or more products no longer exist';
+    end if;
+    if not prod.is_active then
+      raise exception '% is no longer available', prod.name;
+    end if;
+    if prod.stock < qty then
+      raise exception '% is out of stock', prod.name;
+    end if;
+
+    -- One-store cart (null store_id = platform product is its own group).
+    if not first_set then
+      first_store := prod.store_id;
+      first_set := true;
+    elsif first_store is distinct from prod.store_id then
+      raise exception 'Please checkout items from one store at a time.';
+    end if;
+
+    if prod.store_id is not null then
+      select * into store_rec from public.stores where id = prod.store_id;
+      if store_rec.id is null or store_rec.status <> 'APPROVED' or store_rec.is_open = false then
+        raise exception '%''s store is not accepting orders right now', prod.name;
+      end if;
+    end if;
+
+    order_items := order_items || jsonb_build_object(
+      'product', prod.id,
+      'name', prod.name,
+      'image', prod.image,
+      'price', prod.price,
+      'quantity', qty,
+      'unit', prod.unit
+    );
+    subtotal := subtotal + prod.price * qty;
+  end loop;
+
+  if first_store is not null then
+    select * into store_rec from public.stores where id = first_store;
+    delivery_fee := coalesce(store_rec.delivery_fee, 1.99);
+  else
+    delivery_fee := case when subtotal > 20 then 0 else 1.99 end;
+  end if;
+
+  tax := round(subtotal * 0.08, 2);
+  total := round(subtotal + delivery_fee + tax, 2);
+
+  insert into public.orders (
+    user_id, store_id, items, shipping_address, payment_method,
+    subtotal, delivery_fee, tax, total, is_paid, status, status_history
+  ) values (
+    uid, first_store, order_items, coalesce(shipping, '{}'::jsonb), 'cash',
+    subtotal, delivery_fee, tax, total, false, 'Placed',
+    jsonb_build_array(jsonb_build_object(
+      'status', 'Placed', 'note', 'Order placed successfully', 'timestamp', now()
+    ))
+  )
+  returning id into new_order_id;
+
+  -- Decrement stock immediately (cash flow has no payment step).
+  for item in select * from jsonb_array_elements(cart)
+  loop
+    update public.products
+    set stock = stock - (item->>'quantity')::int
+    where id = (item->>'product')::uuid;
+  end loop;
+
+  return new_order_id;
+end;
+$$;
