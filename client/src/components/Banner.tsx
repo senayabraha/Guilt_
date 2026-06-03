@@ -19,7 +19,7 @@ const Banner = () => {
             <div className="flex-center gap-2">
               <TruckIcon className="size-4 shrink-0" />
               <span className="font-medium">
-                Free delivery on orders above ₹1,919.14
+                Free delivery on your first order across Addis Ababa
               </span>
             </div>
 
@@ -27,7 +27,7 @@ const Banner = () => {
 
             <div className="hidden sm:flex items-center gap-2">
               <ZapIcon className="size-4 shrink-0 fill-yellow-400 text-yellow-400 shrink-0" />
-              <span>Farm-fresh produce delivered daily</span>
+              <span>Shop local stores in one place</span>
             </div>
           </div>
 

@@ -24,9 +24,9 @@ const PopularProducts = () => {
       <div className="max-w-7xl mx-auto ">
         <div className="flex items-center justify-between mb-8">
           <div>
-            <h2 className="text-2xl font-semibold">Popular Products</h2>
+            <h2 className="text-2xl font-semibold">Fresh picks from Addis stores</h2>
             <p className="text-sm text-app-text-light mt-1">
-              Top-rated products this season
+              Top-rated items from local stores near you
             </p>
           </div>
           <Link
@@ -54,8 +54,8 @@ const PopularProducts = () => {
             </h3>
 
             <p className="text-sm text-app-text-light mt-2 max-w-md">
-              We couldn&apos;t find any trending products right now. Check back
-              later for fresh arrivals and top-rated grocery picks.
+              We couldn&apos;t find any trending items right now. Check back
+              later for fresh arrivals from stores across Addis Ababa.
             </p>
 
             <Link

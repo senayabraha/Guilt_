@@ -40,7 +40,7 @@ export default function DeliveryLayout() {
           <div className="flex items-center gap-2">
             <TruckIcon className="size-6 text-app-green" />
             <span className="text-lg font-semibold text-app-green">
-              Instacart Delivery
+              Zembil Delivery
             </span>
           </div>
           <div className="flex items-center gap-3">

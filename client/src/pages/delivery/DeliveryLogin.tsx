@@ -62,7 +62,7 @@ export default function DeliveryLogin() {
             Delivery Partner Portal
           </h2>
           <p className="text-white/60 font-serif text-xl max-w-sm mx-auto">
-            Manage your deliveries and keep customers happy.
+            Pick up from stores and deliver across Addis Ababa.
           </p>
         </div>
       </div>
@@ -74,7 +74,7 @@ export default function DeliveryLogin() {
             <div className="flex-center gap-2 mb-4">
               <BikeIcon className="size-7 text-app-green" />
               <span className="text-2xl font-semibold text-app-green">
-                Instacart
+                Zembil Market
               </span>
             </div>
             <h1 className="text-2xl font-semibold text-app-green mb-2">

@@ -42,10 +42,10 @@ const Stores = () => {
         {/* Header */}
         <div className="mb-8">
           <h1 className="text-2xl sm:text-3xl font-semibold text-app-green flex items-center gap-2">
-            <StoreIcon className="size-7" /> Browse Stores
+            <StoreIcon className="size-7" /> Browse stores
           </h1>
           <p className="text-sm text-app-text-light mt-1">
-            Shop from your favourite local stores
+            Stores near you across Addis Ababa
           </p>
         </div>
 

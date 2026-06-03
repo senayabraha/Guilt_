@@ -31,7 +31,7 @@ const FlashDeals = () => {
             <Zap className="size-6 fill-white" />
           </div>
           <p className="text-white/80 max-w-md mx-auto">
-            Limited-time offers on your favorite organic products. Grab them
+            Limited-time offers from local stores across Addis Ababa. Grab them
             before they're gone!
           </p>
         </div>

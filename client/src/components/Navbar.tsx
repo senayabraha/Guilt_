@@ -1,6 +1,5 @@
 import {
   ArrowUpRightIcon,
-  BikeIcon,
   ChevronDownIcon,
   LogOutIcon,
   MapPinIcon,
@@ -8,6 +7,7 @@ import {
   PackageIcon,
   SearchIcon,
   ShieldIcon,
+  ShoppingBasketIcon,
   ShoppingCartIcon,
   StoreIcon,
   UserIcon,
@@ -46,9 +46,13 @@ const Navbar = () => {
         {/* Logo */}
         <Link
           to="/"
-          className="flex items-center gap-2 text-[22px] font-medium shrink-0"
+          className="flex items-center gap-1.5 text-[22px] font-semibold shrink-0 text-app-green"
         >
-          <BikeIcon size={24} /> Instacart
+          <span className="relative">
+            <ShoppingBasketIcon size={26} className="text-app-green" />
+            <span className="absolute -top-0.5 -right-0.5 size-2 rounded-full bg-app-orange" />
+          </span>
+          Zembil Market
         </Link>
 
         <div className="w-full flex items-center justify-end gap-4 lg:gap-10">
@@ -70,7 +74,7 @@ const Navbar = () => {
               <SearchIcon className="absolute left-2.5 top-1/2 -translate-y-1/2 size-4 text-zinc-500" />
               <input
                 type="text"
-                placeholder="Search for groceries..."
+                placeholder="Search stores and groceries..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-8 p-2 bg-orange-50 rounded-full ring ring-app-orange/15 focus:ring-app-orange/30"
@@ -174,12 +178,12 @@ const Navbar = () => {
                       {user &&
                         (user.role === "VENDOR" ? (
                           <Link to="/vendor" className="dropdown-link">
-                            <StoreIcon size={16} /> Vendor Dashboard{" "}
+                            <StoreIcon size={16} /> Store Dashboard{" "}
                           </Link>
                         ) : (
                           !user.isAdmin && (
                             <Link to="/vendor/apply" className="dropdown-link">
-                              <StoreIcon size={16} /> Become a Seller{" "}
+                              <StoreIcon size={16} /> Open Your Store{" "}
                             </Link>
                           )
                         ))}

@@ -1,15 +1,14 @@
-# Full-Stack Grocery Delivery Platform
+# Zembil Market — Frontend
 
-# 🛒 Grocery Delivery Frontend
+**Shop local stores in one place.**
 
-A modern and responsive frontend application for the **Full-Stack Grocery Delivery Platform**, built using:
+The Zembil Market frontend is a modern, responsive web app for a multi-store
+grocery delivery marketplace in Addis Ababa, built using:
 
-- React 19
-- TypeScript
-- Vite
+- React / Vite / TypeScript
 - Tailwind CSS
 - React Router DOM
-- Axios
+- Supabase (Auth, Postgres + RLS, Storage)
 - Leaflet Maps
 
 This frontend provides a complete user experience for:

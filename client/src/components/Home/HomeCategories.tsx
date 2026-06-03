@@ -6,9 +6,9 @@ const HomeCategories = () => {
     <section className="py-16">
       <div className="max-w-7xl mx-auto">
         <div>
-          <h2 className="text-2xl font-semibold">Browse Categories</h2>
+          <h2 className="text-2xl font-semibold">Shop by category</h2>
           <p className="text-sm text-app-text-light mt-1">
-            Find exactly what you need using
+            Everyday essentials from stores near you
           </p>
         </div>
         <div className="flex items-center mt-8 overflow-x-scroll no-scrollbar">

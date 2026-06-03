@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48" fill="none">
+  <!-- Zembil Market logo: woven basket (zembil) with a fresh leaf accent -->
+  <!-- Basket body -->
+  <path d="M10 18 L38 18 L34.5 40 A3 3 0 0 1 31.5 42.5 L16.5 42.5 A3 3 0 0 1 13.5 40 Z"
+        fill="#3D6B4A" stroke="#1B3022" stroke-width="2" stroke-linejoin="round"/>
+  <!-- Woven lines on basket -->
+  <path d="M16 24 L32 24 M15 30 L33 30 M16 36 L32 36" stroke="#1B3022" stroke-width="1.5" stroke-linecap="round" opacity="0.55"/>
+  <!-- Basket rim -->
+  <rect x="8" y="14" width="32" height="6" rx="3" fill="#1B3022"/>
+  <!-- Handle -->
+  <path d="M16 14 A8 8 0 0 1 32 14" fill="none" stroke="#1B3022" stroke-width="2.5" stroke-linecap="round"/>
+  <!-- Fresh leaf accent -->
+  <path d="M30 8 C34 6 39 7 40 12 C35 13 31 12 30 8 Z" fill="#F97316"/>
+  <path d="M31 9 C34 10 37 11 39 11.5" stroke="#FAF7F2" stroke-width="1" stroke-linecap="round" opacity="0.8"/>
+</svg>

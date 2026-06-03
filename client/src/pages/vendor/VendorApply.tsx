@@ -128,6 +128,7 @@ export default function VendorApply({ embedded, onApplied }: Props) {
             type="text"
             value={form.address}
             onChange={(e) => update("address", e.target.value)}
+            placeholder="e.g. Bole Medhanialem, near Edna Mall"
             className={inputClass}
           />
         </div>
@@ -140,18 +141,20 @@ export default function VendorApply({ embedded, onApplied }: Props) {
             type="text"
             value={form.city}
             onChange={(e) => update("city", e.target.value)}
+            placeholder="Addis Ababa"
             className={inputClass}
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-zinc-700 mb-2">
-            State *
+            Sub-city / Area *
           </label>
           <input
             required
             type="text"
             value={form.state}
             onChange={(e) => update("state", e.target.value)}
+            placeholder="e.g. Bole, Kazanchis, Piassa, CMC, Megenagna"
             className={inputClass}
           />
         </div>
@@ -263,10 +266,11 @@ export default function VendorApply({ embedded, onApplied }: Props) {
         <StoreIcon className="size-5 text-app-green" />
         <div>
           <h2 className="text-xl font-semibold text-zinc-900">
-            Become a Seller
+            Open Your Store
           </h2>
           <p className="text-xs text-app-text-light">
-            Apply to open your store. An admin will review your application.
+            List your store on Zembil Market. An admin will review your
+            application.
           </p>
         </div>
       </div>

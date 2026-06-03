@@ -103,10 +103,11 @@ export default function VendorDashboard() {
       <div className="space-y-6">
         <div className="bg-app-green/5 border border-app-green/20 rounded-2xl p-5">
           <h1 className="text-xl font-semibold text-app-green">
-            Welcome to the Vendor Panel
+            Welcome to your Store Dashboard
           </h1>
           <p className="text-sm text-app-text-light mt-1">
-            You don't have a store yet. Apply below to start selling.
+            You don't have a store yet. Open your store below to start selling on
+            Zembil Market.
           </p>
         </div>
         <VendorApply embedded onApplied={load} />

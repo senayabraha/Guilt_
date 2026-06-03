@@ -17,12 +17,12 @@ const Hero = () => {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 w-full">
         <div className="max-w-xl xl:pl-10">
           <span className="inline-flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold text-orange-300 bg-orange-300/10 rounded-full mb-5">
-            <LeafIcon className="size-3" /> Farm-Fresh & Organic
+            <LeafIcon className="size-3" /> Fresh, Local & Trusted · Addis Ababa
           </span>
 
           <h1 className="font-serif text-4xl sm:text-5xl lg:text-6xl text-white leading-tight mb-5">
-            Nourish your home with{" "}
-            <span className="text-orange-300">Earth's finest</span>
+            Shop local stores{" "}
+            <span className="text-orange-300">in one place</span>
           </h1>
 
           <p className="text-base text-white/70 leading-relaxed mb-8 max-w-md">
@@ -34,14 +34,21 @@ const Hero = () => {
               to="/products"
               className="px-7 py-3 bg-orange-400 text-white font-semibold rounded-full hover:bg-orange-500 transition-all flex-center gap-2 active:scale-[0.98]"
             >
-              Shop Now <ArrowRightIcon className="size-4" />
+              Start Shopping <ArrowRightIcon className="size-4" />
             </Link>
 
             <Link
-              to="/products"
+              to="/vendor/apply"
               className="px-7 py-3 bg-white/10 text-white font-semibold rounded-full hover:bg-white/20 transition-all border border-white/20"
             >
-              Browse Categories
+              Open Your Store
+            </Link>
+
+            <Link
+              to="/delivery/login"
+              className="px-7 py-3 text-white/90 font-semibold rounded-full hover:text-white transition-all"
+            >
+              Deliver With Us
             </Link>
           </div>
         </div>

@@ -1,1 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#00a326" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-bike-icon lucide-bike"><circle cx="18.5" cy="17.5" r="3.5"/><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="15" cy="5" r="1"/><path d="M12 17.5V14l-3-3 4-3 2 3h2"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32" fill="none">
+  <rect width="32" height="32" rx="7" fill="#FAF7F2"/>
+  <!-- Basket body -->
+  <path d="M7 13 L25 13 L22.8 27 A2 2 0 0 1 20.8 28.7 L11.2 28.7 A2 2 0 0 1 9.2 27 Z"
+        fill="#3D6B4A" stroke="#1B3022" stroke-width="1.5" stroke-linejoin="round"/>
+  <!-- Basket rim -->
+  <rect x="6" y="10.5" width="20" height="3.5" rx="1.75" fill="#1B3022"/>
+  <!-- Handle -->
+  <path d="M11 10.5 A5 5 0 0 1 21 10.5" fill="none" stroke="#1B3022" stroke-width="1.8" stroke-linecap="round"/>
+  <!-- Leaf accent -->
+  <path d="M19 5 C22 4 25 4.5 25.5 8 C22 8.5 19.5 8 19 5 Z" fill="#F97316"/>
+</svg>

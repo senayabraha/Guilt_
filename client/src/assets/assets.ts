@@ -45,13 +45,13 @@ export const categoriesData = [
 
 export const heroSectionData = {
   description:
-    "Fresh, organic groceries delivered from local farms to your doorstep. Quality you can taste, convenience you deserve.",
+    "Order groceries, household essentials, and local favorites from nearby stores across Addis Ababa.",
   hero_image: hero_bg,
   hero_features: [
-    { icon: TruckIcon, title: "Free Delivery", desc: "Orders over $20" },
-    { icon: LeafIcon, title: "100% Organic", desc: "Certified products" },
-    { icon: ClockIcon, title: "Same Day", desc: "Express delivery" },
-    { icon: ShieldCheckIcon, title: "Secure Pay", desc: "Safe checkout" },
+    { icon: TruckIcon, title: "Fast Delivery", desc: "Across Addis Ababa" },
+    { icon: LeafIcon, title: "Fresh & Local", desc: "From nearby stores" },
+    { icon: ClockIcon, title: "Same Day", desc: "Quick fulfillment" },
+    { icon: ShieldCheckIcon, title: "Trusted", desc: "Cash on delivery" },
   ],
 };
 
@@ -59,16 +59,16 @@ export const deliveryPartnerLoginImage =
   "https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=200";
 
 export const appPromoBannerData = {
-  title: "Get fresh groceries in minutes",
+  title: "Your neighborhood stores, one tap away",
   description:
-    "Download the Instacart app for exclusive deals, real-time tracking, and the freshest selection delivered right to your door.",
+    "Get the Zembil Market app for exclusive deals, real-time order tracking, and fresh picks from local stores across Addis Ababa.",
 };
 
 export const footerData = {
   brand: {
-    name: "Satinder Instacart",
+    name: "Zembil Market",
     description:
-      "Bringing fresh, organic groceries straight from local farms to your doorstep. Nourish your home with Earth's finest.",
+      "Shop local stores in one place. Groceries and essentials from nearby stores across Addis Ababa, delivered fast.",
     socials: [
       { icon: SiFacebook, link: "#" },
       { icon: SiX, link: "#" },
@@ -98,13 +98,13 @@ export const footerData = {
   ],
 
   contact: [
-    { icon: MapPinIcon, text: "123 Green Valley Rd, Portland" },
-    { icon: PhoneIcon, text: "+1 (111) 123-4567" },
-    { icon: MailIcon, text: "hello@example.com" },
+    { icon: MapPinIcon, text: "Bole, Addis Ababa, Ethiopia" },
+    { icon: PhoneIcon, text: "+251 91 123 4567" },
+    { icon: MailIcon, text: "hello@zembilmarket.com" },
   ],
 
   bottom: {
-    copyright: "© 2026 Greatstack. All rights reserved.",
+    copyright: "© 2026 Zembil Market. All rights reserved.",
     links: [
       { label: "Privacy Policy", href: "#" },
       { label: "Terms of Service", href: "#" },
@@ -688,10 +688,10 @@ export const dummyAdminDashboardData = {
     {
       shippingAddress: {
         label: "Home",
-        address: "New Market Road ",
-        city: "New York ",
-        state: "NY",
-        zip: "876543",
+        address: "Megenagna ",
+        city: "Addis Ababa ",
+        state: "Bole",
+        zip: "1000",
         lat: 40.7128,
         lng: -74.006,
       },
@@ -811,10 +811,10 @@ export const dummyDashboardOrdersData = [
   {
     shippingAddress: {
       label: "Home",
-      address: "New Market Road ",
-      city: "New York ",
-      state: "NY",
-      zip: "876543",
+      address: "Megenagna ",
+      city: "Addis Ababa ",
+      state: "Bole",
+      zip: "1000",
       lat: 40.7128,
       lng: -74.006,
     },
@@ -904,10 +904,10 @@ export const dummyDashboardOrdersData = [
   {
     shippingAddress: {
       label: "Home",
-      address: "New Market Road ",
-      city: "New York ",
-      state: "NY",
-      zip: "876543",
+      address: "Megenagna ",
+      city: "Addis Ababa ",
+      state: "Bole",
+      zip: "1000",
       lat: 40.7128,
       lng: -74.006,
     },
@@ -999,24 +999,24 @@ export const dummyCartData = [
 export const dummyAddressData = [
   {
     label: "Home",
-    address: "123 Main St ",
-    city: "New York ",
-    state: "NY",
-    zip: "10001",
+    address: "Bole Medhanialem ",
+    city: "Addis Ababa ",
+    state: "Bole",
+    zip: "1000",
     isDefault: true,
-    lat: 40.7128,
-    lng: -74.006,
+    lat: 8.9806,
+    lng: 38.7578,
     _id: "69d3652df9a340288f1a0f8c",
   },
   {
     label: "Work",
-    address: "456 Market St ",
-    city: "New York ",
-    state: "NY",
-    zip: "10002",
+    address: "Kazanchis ",
+    city: "Addis Ababa ",
+    state: "Kirkos",
+    zip: "1000",
     isDefault: false,
-    lat: 40.7128,
-    lng: -74.006,
+    lat: 9.0125,
+    lng: 38.7693,
     _id: "69d3652df9a340288f1a0f8d",
   },
 ];

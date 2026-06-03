@@ -1,4 +1,4 @@
-import { BikeIcon } from "lucide-react";
+import { ShoppingBasketIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 
 import { footerData } from "../assets/assets";
@@ -12,7 +12,7 @@ const Footer = () => {
           {/* Brand */}
           <div>
             <Link to="/" className="flex items-center gap-2 mb-4">
-              <BikeIcon className="size-6 text-white" />
+              <ShoppingBasketIcon className="size-6 text-white" />
               <span className="text-xl font-semibold">
                 {footerData.brand.name}
               </span>
