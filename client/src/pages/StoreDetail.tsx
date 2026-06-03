@@ -94,7 +94,7 @@ const StoreDetail = () => {
         </nav>
 
         {/* Store Header */}
-        <div className="bg-white rounded-2xl border border-app-border p-6 -mt-2 mt-4 flex flex-col sm:flex-row gap-5 items-start">
+        <div className="bg-white rounded-2xl border border-app-border p-6 mt-4 flex flex-col sm:flex-row gap-5 items-start">
           <div className="size-20 rounded-2xl bg-white border border-app-border overflow-hidden shrink-0 flex-center -mt-12 shadow">
             {store.logo ? (
               <img
