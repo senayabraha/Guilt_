@@ -353,13 +353,109 @@ with check (
 );
 
 -- DELIVERY PARTNERS
-create policy "delivery partners admin or self"
+-- Admins and the partner themselves can read; customers and store owners can
+-- also read the partner assigned to one of their orders (for tracking/pickup).
+create policy "delivery partners admin or self or linked"
 on public.delivery_partners
 for select
-using (public.is_admin() or auth_user_id = auth.uid());
+using (
+  public.is_admin()
+  or auth_user_id = auth.uid()
+  or exists (
+    select 1 from public.orders o
+    where o.delivery_partner_id = delivery_partners.id
+    and o.user_id = auth.uid()
+  )
+  or exists (
+    select 1 from public.orders o
+    join public.stores s on s.id = o.store_id
+    where o.delivery_partner_id = delivery_partners.id
+    and s.owner_id = auth.uid()
+  )
+);
 
 create policy "delivery partners admin manage"
 on public.delivery_partners
 for all
 using (public.is_admin())
 with check (public.is_admin());
+
+-- Public product visibility view: only active, in-stock products from an
+-- approved & open store (or legacy platform products with no store). Uses
+-- security_invoker so the caller's RLS on products/stores still applies.
+create or replace view public.visible_products
+with (security_invoker = on) as
+  select p.*
+  from public.products p
+  left join public.stores s on s.id = p.store_id
+  where p.is_active = true
+    and p.stock > 0
+    and (
+      p.store_id is null
+      or (s.status = 'APPROVED' and s.is_open = true)
+    );
+
+grant select on public.visible_products to anon, authenticated;
+
+-- Prevent role self-escalation. Admins may set any role; a user may only
+-- upgrade themselves from CUSTOMER to VENDOR (the store-application flow).
+create or replace function public.prevent_role_escalation()
+returns trigger
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if new.role is distinct from old.role then
+    if public.is_admin() then
+      return new;
+    end if;
+    if old.id = auth.uid() and old.role = 'CUSTOMER' and new.role = 'VENDOR' then
+      return new;
+    end if;
+    raise exception 'Not allowed to change role';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger profiles_prevent_role_escalation
+before update on public.profiles
+for each row execute function public.prevent_role_escalation();
+
+-- Secure OTP delivery completion: validates the caller is the assigned partner
+-- and the OTP matches, without exposing the OTP through normal reads.
+create or replace function public.complete_delivery(order_uuid uuid, otp_input text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ord public.orders%rowtype;
+begin
+  select * into ord from public.orders where id = order_uuid;
+  if ord.id is null then
+    raise exception 'Order not found';
+  end if;
+  if not exists (
+    select 1 from public.delivery_partners dp
+    where dp.id = ord.delivery_partner_id
+    and dp.auth_user_id = auth.uid()
+  ) then
+    raise exception 'Not authorized';
+  end if;
+  if ord.status in ('Delivered', 'Cancelled') then
+    raise exception 'Invalid request';
+  end if;
+  if ord.delivery_otp is distinct from otp_input then
+    raise exception 'Invalid OTP';
+  end if;
+  update public.orders
+  set status = 'Delivered',
+      delivery_otp = '',
+      status_history = coalesce(status_history, '[]'::jsonb)
+        || jsonb_build_object('status', 'Delivered', 'note', 'Delivered by partner', 'timestamp', now())
+  where id = order_uuid;
+end;
+$$;
