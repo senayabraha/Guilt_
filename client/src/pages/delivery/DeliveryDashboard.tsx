@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { PackageIcon, NavigationIcon } from "lucide-react";
-import axios from "axios";
 import toast from "react-hot-toast";
 
 import OtpModal from "../../components/Delivery/OtpModal";
@@ -8,20 +7,20 @@ import CancelModal from "../../components/Delivery/CancelModal";
 import DeliveryOrderCard from "../../components/Delivery/DeliveryOrderCard";
 import Loading from "../../components/Loading";
 import type { Order } from "../../types";
-
-const API_URL = import.meta.env.VITE_BASE_URL || "http://localhost:5000/api";
-
-const getAuthHeaders = () => ({
-  headers: {
-    Authorization: `Bearer ${localStorage.getItem("delivery_token")}`,
-  },
-});
+import {
+  getMyPartner,
+  getMyDeliveries,
+  updateDeliveryLocation,
+  completeDelivery,
+} from "../../lib/db/deliveryPartners";
+import { updateOrderStatus } from "../../lib/db/orders";
 
 export default function DeliveryDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState<"active" | "completed">("active");
   const [tracking, setTracking] = useState(false);
+  const [partnerId, setPartnerId] = useState<string | null>(null);
 
   // OTP modal
   const [otpModal, setOtpModal] = useState<string | null>(null);
@@ -36,15 +35,19 @@ export default function DeliveryDashboard() {
   const fetchOrders = async () => {
     setLoading(true);
     try {
-      const { data } = await axios.get(
-        `${API_URL}/delivery/my-deliveries?status=${tab}`,
-        getAuthHeaders(),
-      );
-      setOrders(data.orders);
+      let pid = partnerId;
+      if (!pid) {
+        const partner = await getMyPartner();
+        pid = partner?.id ?? null;
+        setPartnerId(pid);
+      }
+      if (!pid) {
+        setOrders([]);
+        return;
+      }
+      setOrders(await getMyDeliveries(pid, tab));
     } catch (error: any) {
-      toast.error(
-        error?.response?.data?.message || "Failed to load deliveries",
-      );
+      toast.error(error?.message || "Failed to load deliveries");
     } finally {
       setLoading(false);
     }
@@ -71,13 +74,7 @@ export default function DeliveryDashboard() {
     const sendLocation = (pos: GeolocationPosition) => {
       const { latitude: lat, longitude: lng } = pos.coords;
       activeOrders.forEach((order) => {
-        axios
-          .put(
-            `${API_URL}/delivery/my-deliveries/${order.id}/location`,
-            { lat, lng },
-            getAuthHeaders(),
-          )
-          .catch(() => {});
+        updateDeliveryLocation(order.id || order._id, lat, lng).catch(() => {});
       });
     };
 
@@ -108,15 +105,11 @@ export default function DeliveryDashboard() {
 
   const handleUpdateStatus = async (orderId: string, status: string) => {
     try {
-      await axios.put(
-        `${API_URL}/delivery/my-deliveries/${orderId}/status`,
-        { status },
-        getAuthHeaders(),
-      );
+      await updateOrderStatus(orderId, status);
       toast.success(`Status updated to ${status}`);
       fetchOrders();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed");
+      toast.error(error?.message || "Failed");
     }
   };
 
@@ -124,17 +117,13 @@ export default function DeliveryDashboard() {
     if (!otpModal || !otp) return;
     setSubmitting(true);
     try {
-      await axios.put(
-        `${API_URL}/delivery/my-deliveries/${otpModal}/complete`,
-        { otp },
-        getAuthHeaders(),
-      );
+      await completeDelivery(otpModal, otp);
       toast.success("Delivery completed!");
       setOtpModal(null);
       setOtp("");
       fetchOrders();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || error?.message);
+      toast.error(error?.message || "Invalid OTP");
     } finally {
       setSubmitting(false);
     }
@@ -144,17 +133,13 @@ export default function DeliveryDashboard() {
     if (!cancelModal) return;
     setSubmitting(true);
     try {
-      await axios.put(
-        `${API_URL}/delivery/my-deliveries/${cancelModal}/cancel`,
-        { reason: cancelReason },
-        getAuthHeaders(),
-      );
+      await updateOrderStatus(cancelModal, "Cancelled", cancelReason);
       toast.success("Delivery cancelled");
       setCancelModal(null);
       setCancelReason("");
       fetchOrders();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed");
+      toast.error(error?.message || "Failed");
     } finally {
       setSubmitting(false);
     }

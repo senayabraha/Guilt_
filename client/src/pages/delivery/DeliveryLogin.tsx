@@ -3,7 +3,8 @@ import { BikeIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { heroSectionData } from "../../assets/assets";
-import api from "../../config/api";
+import { supabase } from "../../lib/supabase";
+import { getMyPartner } from "../../lib/db/deliveryPartners";
 import toast from "react-hot-toast";
 
 export default function DeliveryLogin() {
@@ -16,23 +17,36 @@ export default function DeliveryLogin() {
     e.preventDefault();
     setLoading(true);
     try {
-      const { data } = await api.post("/delivery/login", { email, password });
-      localStorage.setItem("delivery_token", data.token);
-      localStorage.setItem("delivery_partner", JSON.stringify(data.partner));
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.toLowerCase(),
+        password,
+      });
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      const partner = await getMyPartner();
+      if (!partner) {
+        await supabase.auth.signOut();
+        toast.error("This account is not a delivery partner");
+        return;
+      }
       toast.success("Login successful");
       navigate("/delivery");
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || error?.message);
+      toast.error(error?.message || "Login failed");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    if (localStorage.getItem("delivery_token")) {
-      navigate("/delivery");
-    }
-  }, []);
+    getMyPartner()
+      .then((p) => {
+        if (p) navigate("/delivery");
+      })
+      .catch(() => {});
+  }, [navigate]);
 
   return (
     <div className="min-h-screen flex">

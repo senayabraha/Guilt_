@@ -3,29 +3,34 @@ import { LogOutIcon, TruckIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
 import type { DeliveryPartner } from "../../types";
+import { supabase } from "../../lib/supabase";
+import { getMyPartner } from "../../lib/db/deliveryPartners";
 
 export default function DeliveryLayout() {
   const navigate = useNavigate();
   const [partner, setPartner] = useState<DeliveryPartner | null>(null);
+  const [checked, setChecked] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("delivery_partner");
-    const token = localStorage.getItem("delivery_token");
-    if (!saved || !token) {
-      navigate("/delivery/login");
-      return;
-    }
-    setPartner(JSON.parse(saved));
+    getMyPartner()
+      .then((p) => {
+        if (!p) {
+          navigate("/delivery/login");
+          return;
+        }
+        setPartner(p);
+      })
+      .catch(() => navigate("/delivery/login"))
+      .finally(() => setChecked(true));
   }, [navigate]);
 
-  const handleLogout = () => {
-    localStorage.removeItem("delivery_partner");
-    localStorage.removeItem("delivery_token");
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     setPartner(null);
     navigate("/delivery/login");
   };
 
-  if (!partner) return null;
+  if (!checked || !partner) return null;
 
   return (
     <div className="min-h-screen bg-app-cream">
