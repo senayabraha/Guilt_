@@ -49,6 +49,12 @@ app.use((error: any, req: Request, res: Response, next: NextFunction) => {
   res.status(500).json({ message: error.message });
 });
 
-app.listen(port, () => {
-  console.log(`Server is running at http://localhost:${port}`);
-});
+// On Vercel (serverless) the platform invokes the exported app as the request
+// handler, so we must not bind a port. Only listen when running locally.
+if (!process.env.VERCEL) {
+  app.listen(port, () => {
+    console.log(`Server is running at http://localhost:${port}`);
+  });
+}
+
+export default app;
