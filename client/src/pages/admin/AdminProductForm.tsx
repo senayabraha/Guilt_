@@ -4,7 +4,8 @@ import { ArrowLeftIcon } from "lucide-react";
 
 import { categoriesData } from "../../assets/assets";
 import Loading from "../../components/Loading";
-import api from "../../config/api";
+import { getProduct, createProduct, updateProduct } from "../../lib/db/products";
+import { uploadProductImage } from "../../lib/storage";
 import toast from "react-hot-toast";
 
 export default function AdminProductForm() {
@@ -31,9 +32,13 @@ export default function AdminProductForm() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        if (isEdit) {
-          const { data: prodData } = await api.get(`/products/${id}`);
-          const p = prodData.product;
+        if (isEdit && id) {
+          const p = await getProduct(id);
+          if (!p) {
+            toast.error("Product not found");
+            navigate("/admin/products");
+            return;
+          }
           setFormData({
             name: p.name,
             description: p.description,
@@ -47,7 +52,7 @@ export default function AdminProductForm() {
           });
         }
       } catch (error: any) {
-        toast.error(error.response?.data?.message || "Failed to load data");
+        toast.error(error?.message || "Failed to load data");
       } finally {
         setLoading(false);
       }
@@ -62,10 +67,7 @@ export default function AdminProductForm() {
       let finalImageUrl = formData.image;
 
       if (imageFile) {
-        const formDataUpload = new FormData();
-        formDataUpload.append("image", imageFile);
-        const { data } = await api.post("/upload", formDataUpload);
-        finalImageUrl = data.url;
+        finalImageUrl = await uploadProductImage(imageFile);
       }
 
       if (!finalImageUrl) {
@@ -84,16 +86,17 @@ export default function AdminProductForm() {
         stock: Number(formData.stock),
       };
 
-      if (isEdit) {
-        await api.put(`/products/${id}`, payload);
+      if (isEdit && id) {
+        await updateProduct(id, payload);
         toast.success("Product updated successfully");
       } else {
-        await api.post("/products", payload);
+        // Admin-created products are platform-owned (no store_id).
+        await createProduct(payload, null);
         toast.success("Product created successfully");
       }
       navigate("/admin/products");
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to save product");
+      toast.error(error?.message || "Failed to save product");
     } finally {
       setSaving(false);
     }

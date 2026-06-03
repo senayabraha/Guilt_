@@ -13,7 +13,7 @@ import toast from "react-hot-toast";
 
 import Loading from "../../components/Loading";
 import { statusColors } from "../../assets/assets";
-import api from "../../config/api";
+import { getAdminStore, setStoreStatus } from "../../lib/db/stores";
 
 const storeStatusColors: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-700",
@@ -29,11 +29,11 @@ export default function AdminStoreDetail() {
   const [loading, setLoading] = useState(true);
 
   const fetchStore = async () => {
+    if (!id) return;
     try {
-      const { data } = await api.get(`/admin/stores/${id}`);
-      setStore(data.store);
+      setStore(await getAdminStore(id));
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to load store");
+      toast.error(error?.message || "Failed to load store");
     } finally {
       setLoading(false);
     }
@@ -45,24 +45,26 @@ export default function AdminStoreDetail() {
   }, [id]);
 
   const handleApprove = async () => {
+    if (!id) return;
     try {
-      await api.put(`/admin/stores/${id}/approve`);
+      await setStoreStatus(id, "APPROVED");
       toast.success("Store approved");
       fetchStore();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to approve store");
+      toast.error(error?.message || "Failed to approve store");
     }
   };
 
   const handleSuspend = async () => {
+    if (!id) return;
     if (!window.confirm("Suspend this store? Its products will be hidden."))
       return;
     try {
-      await api.put(`/admin/stores/${id}/suspend`);
+      await setStoreStatus(id, "SUSPENDED");
       toast.success("Store suspended");
       fetchStore();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed to suspend store");
+      toast.error(error?.message || "Failed to suspend store");
     }
   };
 

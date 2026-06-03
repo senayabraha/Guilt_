@@ -4,7 +4,11 @@ import toast from "react-hot-toast";
 
 import type { DeliveryPartner } from "../../types";
 import Loading from "../../components/Loading";
-import api from "../../config/api";
+import {
+  getAllPartners,
+  createPartner,
+  updatePartner,
+} from "../../lib/db/deliveryPartners";
 
 export default function AdminDeliveryPartners() {
   const [partners, setPartners] = useState<DeliveryPartner[]>([]);
@@ -21,10 +25,9 @@ export default function AdminDeliveryPartners() {
 
   const fetchPartners = async () => {
     try {
-      const { data } = await api.get("/admin/delivery-partners");
-      setPartners(data.partners);
+      setPartners(await getAllPartners());
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed");
+      toast.error(error?.message || "Failed");
     } finally {
       setLoading(false);
     }
@@ -38,7 +41,7 @@ export default function AdminDeliveryPartners() {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.post("/admin/delivery-partners", form);
+      await createPartner(form);
       toast.success("Partner onboarded successfully!");
       setShowForm(false);
       setForm({
@@ -50,7 +53,7 @@ export default function AdminDeliveryPartners() {
       });
       fetchPartners();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed");
+      toast.error(error?.message || "Failed");
     } finally {
       setSaving(false);
     }
@@ -58,11 +61,11 @@ export default function AdminDeliveryPartners() {
 
   const toggleActive = async (id: string, isActive: boolean) => {
     try {
-      await api.put(`/admin/delivery-partners/${id}`, { isActive: !isActive });
+      await updatePartner(id, { isActive: !isActive });
       toast.success(isActive ? "Partner deactivated" : "Partner activated");
       fetchPartners();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || "Failed");
+      toast.error(error?.message || "Failed");
     }
   };
 

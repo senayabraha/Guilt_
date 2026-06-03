@@ -4,7 +4,7 @@ import { PlusIcon, EditIcon, XIcon } from "lucide-react";
 
 import type { Product } from "../../types";
 import Loading from "../../components/Loading";
-import api from "../../config/api";
+import { getAllProducts, deactivateProduct } from "../../lib/db/products";
 import toast from "react-hot-toast";
 
 export default function AdminProducts() {
@@ -15,10 +15,9 @@ export default function AdminProducts() {
 
   const fetchProducts = async () => {
     try {
-      const { data } = await api.get("/products");
-      setProducts(data.products);
+      setProducts(await getAllProducts());
     } catch (error: any) {
-      toast.error(error.response?.data?.message || error?.message);
+      toast.error(error?.message || "Failed to load products");
     } finally {
       setLoading(false);
     }
@@ -36,11 +35,11 @@ export default function AdminProducts() {
     )
       return;
     try {
-      await api.delete(`/products/${id}`);
+      await deactivateProduct(id);
       toast.success("Product marked as out of stock");
       fetchProducts();
     } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to update product");
+      toast.error(error?.message || "Failed to update product");
     }
   };
 

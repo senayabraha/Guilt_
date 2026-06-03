@@ -9,7 +9,8 @@ import {
 
 import Loading from "../../components/Loading";
 import { statusColors } from "../../assets/assets";
-import api from "../../config/api";
+import { supabase } from "../../lib/supabase";
+import { getAllOrders } from "../../lib/db/orders";
 
 interface Stats {
   totalOrders: number;
@@ -26,11 +27,30 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api
-      .get("/admin/stats")
-      .then((res) => setStats(res.data))
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    (async () => {
+      try {
+        const [orders, users, products, outOfStock] = await Promise.all([
+          getAllOrders(),
+          supabase.from("profiles").select("*", { count: "exact", head: true }),
+          supabase.from("products").select("*", { count: "exact", head: true }),
+          supabase
+            .from("products")
+            .select("*", { count: "exact", head: true })
+            .eq("stock", 0),
+        ]);
+        setStats({
+          totalOrders: orders.length,
+          totalUsers: users.count ?? 0,
+          totalProducts: products.count ?? 0,
+          outOfStock: outOfStock.count ?? 0,
+          recentOrders: orders.slice(0, 8),
+        });
+      } catch {
+        /* ignore */
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
   const cards = stats
