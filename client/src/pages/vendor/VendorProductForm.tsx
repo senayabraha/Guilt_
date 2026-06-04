@@ -1,22 +1,32 @@
 import { useState, useEffect } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import {
+  useParams,
+  useSearchParams,
+  Link,
+  useNavigate,
+} from "react-router-dom";
 import { ArrowLeftIcon } from "lucide-react";
 import toast from "react-hot-toast";
 
 import { categoriesData } from "../../assets/assets";
 import Loading from "../../components/Loading";
 import MultiImageUpload from "../../components/MultiImageUpload";
-import { getMyStore } from "../../lib/db/stores";
-import { getStoreProducts, createProduct, updateProduct } from "../../lib/db/products";
+import type { Store } from "../../types";
+import { getMyStores } from "../../lib/db/stores";
+import { getProduct, updateProduct } from "../../lib/db/products";
+import { createVendorProductForStores } from "../../lib/db/vendorProducts";
 
 export default function VendorProductForm() {
   const { id } = useParams();
   const isEdit = Boolean(id);
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
   const [images, setImages] = useState<string[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
+  const [selectedStores, setSelectedStores] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -34,11 +44,22 @@ export default function VendorProductForm() {
 
   useEffect(() => {
     const fetchData = async () => {
-      if (!isEdit) return;
       try {
-        const store = await getMyStore();
-        const products = store ? await getStoreProducts(store.id) : [];
-        const p = products.find((prod) => prod.id === id || prod._id === id);
+        const myStores = await getMyStores();
+        setStores(myStores);
+
+        if (!isEdit) {
+          const storeParam = searchParams.get("store");
+          if (storeParam) {
+            const match = myStores.find(
+              (s) => s.id === storeParam && s.status === "APPROVED",
+            );
+            if (match) setSelectedStores([match.id]);
+          }
+          return;
+        }
+
+        const p = await getProduct(id!);
         if (!p) {
           toast.error("Product not found");
           navigate("/vendor/products");
@@ -57,7 +78,9 @@ export default function VendorProductForm() {
           isOrganic: Boolean(p.isOrganic),
           isActive: p.isActive ?? true,
         });
-        setImages(p.images && p.images.length ? p.images : p.image ? [p.image] : []);
+        setImages(
+          p.images && p.images.length ? p.images : p.image ? [p.image] : [],
+        );
       } catch (error: any) {
         toast.error(error?.response?.data?.message || "Failed to load product");
       } finally {
@@ -65,7 +88,7 @@ export default function VendorProductForm() {
       }
     };
     fetchData();
-  }, [id, isEdit, navigate]);
+  }, [id, isEdit, navigate, searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -95,18 +118,14 @@ export default function VendorProductForm() {
       };
 
       if (isEdit && id) {
-        // store_id is never passed on update.
+        // store_id is never passed on update; edits one product row (one store).
         await updateProduct(id, payload);
         toast.success("Product updated successfully");
       } else {
-        const store = await getMyStore();
-        if (!store) {
-          toast.error("You need an approved store before adding products");
-          setSaving(false);
-          return;
-        }
-        await createProduct(payload, store.id);
-        toast.success("Product created successfully");
+        await createVendorProductForStores(payload, selectedStores);
+        toast.success(
+          `Product added to ${selectedStores.length} store(s)`,
+        );
       }
       navigate("/vendor/products");
     } catch (error: any) {
@@ -136,6 +155,75 @@ export default function VendorProductForm() {
         <Loading />
       ) : (
         <form onSubmit={handleSubmit} className="p-6 space-y-6">
+          {isEdit ? (
+            <div className="rounded-lg bg-zinc-50 border border-app-border px-4 py-3 text-sm text-zinc-500">
+              Editing this product updates it for this store only.
+            </div>
+          ) : (
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-2">
+                Assign to stores
+              </label>
+              {stores.filter((s) => s.status === "APPROVED").length === 0 ? (
+                <div className="rounded-lg bg-zinc-50 border border-app-border px-4 py-3 text-sm text-zinc-600">
+                  You need an approved store before adding products.{" "}
+                  <Link
+                    to="/vendor/apply"
+                    className="text-app-green font-medium hover:underline"
+                  >
+                    Apply for a store
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {stores.map((store) => {
+                    const isApproved = store.status === "APPROVED";
+                    const checked = selectedStores.includes(store.id);
+                    return (
+                      <label
+                        key={store.id}
+                        htmlFor={`store-${store.id}`}
+                        className={`flex items-start gap-3 rounded-lg border border-app-border px-4 py-3 ${
+                          isApproved
+                            ? "cursor-pointer hover:border-app-green"
+                            : "opacity-70"
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          id={`store-${store.id}`}
+                          disabled={!isApproved}
+                          checked={checked}
+                          onChange={(e) => {
+                            setSelectedStores((prev) =>
+                              e.target.checked
+                                ? [...prev, store.id]
+                                : prev.filter((sid) => sid !== store.id),
+                            );
+                          }}
+                          className="mt-0.5 size-5 text-app-green rounded border-zinc-300 focus:ring-app-green disabled:cursor-not-allowed"
+                        />
+                        <span>
+                          <span
+                            className={`block text-sm font-medium ${
+                              isApproved ? "text-zinc-800" : "text-zinc-400"
+                            }`}
+                          >
+                            {store.name}
+                          </span>
+                          {!isApproved && (
+                            <span className="block text-xs text-zinc-400">
+                              Store must be approved before adding products.
+                            </span>
+                          )}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-medium text-zinc-700 mb-2">
@@ -303,7 +391,7 @@ export default function VendorProductForm() {
 
           <div className="pt-6 border-t border-app-border flex justify-end">
             <button
-              disabled={saving}
+              disabled={saving || (!isEdit && selectedStores.length === 0)}
               type="submit"
               className="px-6 py-2.5 bg-app-orange text-white font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50"
             >

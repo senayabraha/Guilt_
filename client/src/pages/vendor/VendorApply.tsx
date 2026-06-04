@@ -6,7 +6,7 @@ import toast from "react-hot-toast";
 import { categoriesData } from "../../assets/assets";
 import { ADDIS_AREAS } from "../../lib/areas";
 import { useAuth } from "../../context/AuthContext";
-import { applyForStore, getMyStore } from "../../lib/db/stores";
+import { applyForStore } from "../../lib/db/stores";
 import { becomeVendor } from "../../lib/db/profiles";
 import ImageCropUpload from "../../components/ImageCropUpload";
 import MapPinPicker from "../../components/MapPinPicker";
@@ -94,15 +94,8 @@ export default function VendorApply({ embedded, onApplied }: Props) {
 
     setSaving(true);
     try {
-      // One vendor = one store application for now.
-      const existing = await getMyStore();
-      if (existing) {
-        toast.error("You already have a store application.");
-        onApplied?.();
-        navigate("/vendor");
-        return;
-      }
-
+      // A vendor can own multiple stores/branches, so we no longer block on an
+      // existing store — each application creates a new store.
       const payload = {
         ...form,
         email: form.email.trim() || user.email,

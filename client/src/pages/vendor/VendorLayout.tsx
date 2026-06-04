@@ -1,10 +1,7 @@
 import { Navigate, NavLink, Outlet } from "react-router-dom";
 import {
-  BarChart3Icon,
   PlusIcon,
   PackageSearchIcon,
-  ShoppingBagIcon,
-  SettingsIcon,
   StoreIcon,
   LogOutIcon,
 } from "lucide-react";
@@ -15,12 +12,12 @@ import { useAuth } from "../../context/AuthContext";
 export default function VendorLayout() {
   const { user, loading } = useAuth();
 
+  // Orders & Settings are scoped to a selected store, so they live inside each
+  // store's dashboard rather than the global sidebar.
   const VendorLinkData = [
-    { to: "/vendor", label: "Dashboard", icon: BarChart3Icon },
-    { to: "/vendor/products/new", label: "Add Product", icon: PlusIcon },
+    { to: "/vendor", label: "My Stores", icon: StoreIcon },
     { to: "/vendor/products", label: "Products", icon: PackageSearchIcon },
-    { to: "/vendor/orders", label: "Orders", icon: ShoppingBagIcon },
-    { to: "/vendor/settings", label: "Store Settings", icon: SettingsIcon },
+    { to: "/vendor/products/new", label: "Add Product", icon: PlusIcon },
     { to: "/", label: "Exit", icon: LogOutIcon },
   ];
 
@@ -43,7 +40,7 @@ export default function VendorLayout() {
         <aside className="w-full lg:w-64 shrink-0 h-fit bg-white rounded-2xl p-4 border border-app-border">
           <div className="pb-4 mb-4 border-b border-app-border">
             <h2 className="text-lg font-semibold text-app-green flex items-center gap-2 px-2">
-              <StoreIcon className="size-5 text-green-900" /> Store Dashboard
+              <StoreIcon className="size-5 text-green-900" /> Vendor
             </h2>
           </div>
           <nav className="flex flex-col gap-1.5">

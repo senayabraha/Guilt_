@@ -1,5 +1,5 @@
 import { Toaster } from "react-hot-toast";
-import { Route, Routes } from "react-router-dom";
+import { Navigate, Route, Routes } from "react-router-dom";
 
 import Login from "./pages/Login";
 import AppLayout from "./pages/AppLayout";
@@ -25,6 +25,7 @@ import AdminStores from "./pages/admin/AdminStores";
 import AdminStoreDetail from "./pages/admin/AdminStoreDetail";
 
 import VendorLayout from "./pages/vendor/VendorLayout";
+import VendorStores from "./pages/vendor/VendorStores";
 import VendorDashboard from "./pages/vendor/VendorDashboard";
 import VendorProducts from "./pages/vendor/VendorProducts";
 import VendorProductForm from "./pages/vendor/VendorProductForm";
@@ -88,12 +89,19 @@ const App = () => {
         {/* Vendor pages */}
         <Route path="/vendor/apply" element={<VendorApply />} />
         <Route path="/vendor" element={<VendorLayout />}>
-          <Route index element={<VendorDashboard />} />
+          {/* Landing: list of all stores the vendor owns */}
+          <Route index element={<VendorStores />} />
+          {/* Products span all the vendor's stores */}
           <Route path="products" element={<VendorProducts />} />
           <Route path="products/new" element={<VendorProductForm />} />
           <Route path="products/:id/edit" element={<VendorProductForm />} />
-          <Route path="orders" element={<VendorOrders />} />
-          <Route path="settings" element={<VendorSettings />} />
+          {/* Store-scoped dashboard, orders and settings */}
+          <Route path="stores/:storeId" element={<VendorDashboard />} />
+          <Route path="stores/:storeId/orders" element={<VendorOrders />} />
+          <Route path="stores/:storeId/settings" element={<VendorSettings />} />
+          {/* Legacy routes: send the vendor to pick a store first */}
+          <Route path="orders" element={<Navigate to="/vendor" replace />} />
+          <Route path="settings" element={<Navigate to="/vendor" replace />} />
         </Route>
 
         {/* Delivery Partner pages */}

@@ -68,6 +68,28 @@ export async function getMyStore(): Promise<Store | null> {
   return data ? mapStore(data) : null;
 }
 
+// Vendor: ALL stores owned by the current user (RLS scopes to owner_id).
+// Uses the product-count-only select to avoid the orders RLS path.
+export async function getMyStores(): Promise<Store[]> {
+  const { data, error } = await supabase
+    .from("stores")
+    .select(STORE_WITH_COUNTS)
+    .order("created_at", { ascending: true });
+  if (error) throw error;
+  return (data ?? []).map(mapStore);
+}
+
+// Vendor: a single owned store by id (RLS ensures the caller owns it).
+export async function getMyStoreById(id: string): Promise<Store | null> {
+  const { data, error } = await supabase
+    .from("stores")
+    .select(STORE_WITH_COUNTS)
+    .eq("id", id)
+    .maybeSingle();
+  if (error) throw error;
+  return data ? mapStore(data) : null;
+}
+
 export async function applyForStore(
   form: any,
   ownerId: string,

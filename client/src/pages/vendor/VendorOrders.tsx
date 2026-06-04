@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useParams, Navigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
+import type { Store } from "../../types";
 import Loading from "../../components/Loading";
 import { statusColors } from "../../assets/assets";
-import { getMyStore } from "../../lib/db/stores";
+import { getMyStoreById } from "../../lib/db/stores";
 import { getStoreOrders, updateOrderStatus } from "../../lib/db/orders";
 import { formatCurrency } from "../../lib/format";
 
@@ -21,19 +23,25 @@ const FILTERS = [
 ];
 
 export default function VendorOrders() {
+  const { storeId } = useParams();
   const [orders, setOrders] = useState<any[]>([]);
+  const [store, setStore] = useState<Store | null>(null);
+  const [storeMissing, setStoreMissing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("all");
 
   const fetchOrders = async (status = filter) => {
+    if (!storeId) return;
     setLoading(true);
     try {
-      const store = await getMyStore();
-      if (!store) {
+      const s = await getMyStoreById(storeId);
+      if (!s) {
+        setStoreMissing(true);
         setOrders([]);
         return;
       }
-      setOrders(await getStoreOrders(store.id, status));
+      setStore(s);
+      setOrders(await getStoreOrders(storeId, status));
     } catch (error: any) {
       toast.error(error?.message || "Failed to load orders");
     } finally {
@@ -44,7 +52,10 @@ export default function VendorOrders() {
   useEffect(() => {
     fetchOrders(filter);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [filter, storeId]);
+
+  if (!storeId) return <Navigate to="/vendor" replace />;
+  if (storeMissing) return <Navigate to="/vendor" replace />;
 
   const updateStatus = async (id: string, status: string) => {
     // Vendor UI only offers Confirmed/Packed/Ready for Pickup/Cancelled.
@@ -60,6 +71,13 @@ export default function VendorOrders() {
 
   return (
     <div className="space-y-5">
+      <Link
+        to={`/vendor/stores/${storeId}`}
+        className="inline-flex items-center text-sm font-medium text-zinc-600 hover:text-app-green transition-colors"
+      >
+        ← Store dashboard
+      </Link>
+
       {/* Filter tabs */}
       <div className="flex gap-2 flex-wrap">
         {FILTERS.map((f) => (
@@ -75,7 +93,9 @@ export default function VendorOrders() {
 
       <div className="bg-white rounded-2xl shadow-sm border border-app-border overflow-hidden">
         <div className="px-6 py-5 border-b border-app-border">
-          <h2 className="text-xl font-semibold text-zinc-900">Orders</h2>
+          <h2 className="text-xl font-semibold text-zinc-900">
+            Orders{store?.name ? ` · ${store.name}` : ""}
+          </h2>
         </div>
         {loading ? (
           <Loading />

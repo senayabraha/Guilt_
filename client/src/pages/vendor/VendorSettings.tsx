@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
+import { useParams, Navigate, Link } from "react-router-dom";
 import toast from "react-hot-toast";
 
 import { categoriesData } from "../../assets/assets";
 import Loading from "../../components/Loading";
 import ImageCropUpload from "../../components/ImageCropUpload";
 import MapPinPicker from "../../components/MapPinPicker";
-import { getMyStore, updateMyStore } from "../../lib/db/stores";
+import { getMyStoreById, updateMyStore } from "../../lib/db/stores";
 
 const storeStatusColors: Record<string, string> = {
   PENDING: "bg-amber-100 text-amber-700",
@@ -14,10 +15,11 @@ const storeStatusColors: Record<string, string> = {
 };
 
 export default function VendorSettings() {
+  const { storeId } = useParams();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
-  const [storeId, setStoreId] = useState("");
+  const [notFound, setNotFound] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
   const [form, setForm] = useState({
     name: "",
@@ -39,15 +41,15 @@ export default function VendorSettings() {
   });
 
   useEffect(() => {
+    if (!storeId) return;
     const fetchStore = async () => {
       try {
-        const s = await getMyStore();
+        const s = await getMyStoreById(storeId);
         if (!s) {
-          toast.error("No store found");
+          setNotFound(true);
           return;
         }
         setStatus(s.status);
-        setStoreId(s.id);
         setCategories(s.categories || []);
         setForm({
           name: s.name || "",
@@ -74,7 +76,7 @@ export default function VendorSettings() {
       }
     };
     fetchStore();
-  }, []);
+  }, [storeId]);
 
   const update = (key: string, value: string | boolean) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -99,13 +101,23 @@ export default function VendorSettings() {
     }
   };
 
+  if (!storeId) return <Navigate to="/vendor" replace />;
   if (loading) return <Loading />;
+  if (notFound) return <Navigate to="/vendor" replace />;
 
   const inputClass =
     "w-full px-4 py-2.5 rounded-lg border border-zinc-200 focus:border-app-green focus:ring-1 focus:ring-app-green outline-none transition-all";
 
   return (
-    <div className="bg-white rounded-2xl shadow-sm border border-app-border overflow-hidden">
+    <div className="space-y-4">
+      <Link
+        to={`/vendor/stores/${storeId}`}
+        className="inline-flex items-center text-sm font-medium text-zinc-600 hover:text-app-green transition-colors"
+      >
+        ← Store dashboard
+      </Link>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-app-border overflow-hidden">
       <div className="px-6 py-5 border-b border-app-border flex items-center justify-between gap-3 flex-wrap">
         <h2 className="text-xl font-semibold text-zinc-900">Store Settings</h2>
         {status && (
@@ -321,6 +333,7 @@ export default function VendorSettings() {
           </button>
         </div>
       </form>
+      </div>
     </div>
   );
 }

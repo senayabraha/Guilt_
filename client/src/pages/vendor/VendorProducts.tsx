@@ -1,27 +1,26 @@
-import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { PlusIcon, EditIcon, CheckIcon } from "lucide-react";
 import toast from "react-hot-toast";
 
 import type { Product } from "../../types";
 import Loading from "../../components/Loading";
-import { getMyStore } from "../../lib/db/stores";
-import { getStoreProducts, updateProduct } from "../../lib/db/products";
+import { getMyVendorProducts } from "../../lib/db/vendorProducts";
+import { updateProduct } from "../../lib/db/products";
 import { formatCurrency } from "../../lib/format";
 
 export default function VendorProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [stockEdits, setStockEdits] = useState<Record<string, string>>({});
+  const [searchParams] = useSearchParams();
+  const [filter, setFilter] = useState<string>(
+    () => searchParams.get("store") || "all",
+  );
 
   const fetchProducts = async () => {
     try {
-      const store = await getMyStore();
-      if (!store) {
-        setProducts([]);
-        return;
-      }
-      setProducts(await getStoreProducts(store.id));
+      setProducts(await getMyVendorProducts());
     } catch (error: any) {
       toast.error(error?.message || "Failed to load products");
     } finally {
@@ -32,6 +31,24 @@ export default function VendorProducts() {
   useEffect(() => {
     fetchProducts();
   }, []);
+
+  // Distinct stores found among the products, for the filter pills.
+  const stores = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const p of products) {
+      const id = p.store?.id || p.storeId;
+      if (id && !map.has(id)) map.set(id, p.store?.name || "Store");
+    }
+    return Array.from(map, ([id, name]) => ({ id, name }));
+  }, [products]);
+
+  const visibleProducts = useMemo(
+    () =>
+      filter === "all"
+        ? products
+        : products.filter((p) => (p.store?.id || p.storeId) === filter),
+    [products, filter],
+  );
 
   const toggleActive = async (product: Product) => {
     try {
@@ -69,7 +86,7 @@ export default function VendorProducts() {
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-app-border overflow-hidden">
       <div className="px-6 py-5 border-b border-app-border flex items-center justify-between gap-4 flex-wrap">
-        <h2 className="text-xl font-semibold text-zinc-900">My Products</h2>
+        <h2 className="text-xl font-semibold text-zinc-900">Products</h2>
         <Link
           to="/vendor/products/new"
           className="flex items-center gap-2 px-4 py-2 bg-app-green text-white rounded-xl hover:bg-green-950 transition-colors font-medium text-sm"
@@ -77,11 +94,31 @@ export default function VendorProducts() {
           <PlusIcon className="size-4" /> Add Product
         </Link>
       </div>
+      {stores.length > 0 && (
+        <div className="px-6 py-4 border-b border-app-border flex gap-2 flex-wrap overflow-x-auto">
+          <button
+            onClick={() => setFilter("all")}
+            className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${filter === "all" ? "bg-app-green text-white border-app-green" : "bg-white text-zinc-600 border-app-border hover:bg-app-cream"}`}
+          >
+            All stores
+          </button>
+          {stores.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => setFilter(s.id)}
+              className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${filter === s.id ? "bg-app-green text-white border-app-green" : "bg-white text-zinc-600 border-app-border hover:bg-app-cream"}`}
+            >
+              {s.name}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm whitespace-nowrap">
           <thead className="bg-app-cream/50 text-zinc-500 uppercase text-xs font-semibold">
             <tr>
               <th className="px-6 py-4">Product</th>
+              <th className="px-6 py-4">Store</th>
               <th className="px-6 py-4">Price</th>
               <th className="px-6 py-4">Stock</th>
               <th className="px-6 py-4">Status</th>
@@ -89,14 +126,14 @@ export default function VendorProducts() {
             </tr>
           </thead>
           <tbody className="divide-y divide-app-border">
-            {products.length === 0 ? (
+            {visibleProducts.length === 0 ? (
               <tr>
-                <td colSpan={5} className="px-6 py-8 text-center text-zinc-500">
+                <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">
                   No products yet. Add your first product.
                 </td>
               </tr>
             ) : (
-              products.map((product) => {
+              visibleProducts.map((product) => {
                 const pid = product.id || product._id;
                 return (
                   <tr
@@ -119,6 +156,9 @@ export default function VendorProducts() {
                           </p>
                         </div>
                       </div>
+                    </td>
+                    <td className="px-6 py-4 text-zinc-600">
+                      {product.store?.name || "—"}
                     </td>
                     <td className="px-6 py-4 font-medium">
                       {formatCurrency(product.price)}
