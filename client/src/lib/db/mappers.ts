@@ -239,7 +239,15 @@ export function mapOrder(row: any): Order {
       : row.user_id,
     storeId: row.store_id ?? null,
     store: row.store ? mapStore(row.store) : null,
-    items: row.items ?? [],
+    items: Array.isArray(row.items)
+      ? row.items.map((item: any) => ({
+          ...item,
+          prepStatus: item.prepStatus ?? "pending",
+          pickedQuantity: Number(item.pickedQuantity ?? 0),
+          unavailableReason: item.unavailableReason ?? "",
+          preparedAt: item.preparedAt ?? null,
+        }))
+      : [],
     shippingAddress: row.shipping_address ?? {},
     paymentMethod: row.payment_method,
     subtotal: num(row.subtotal),

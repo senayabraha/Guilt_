@@ -60,7 +60,7 @@ export default function DeliveryDashboard() {
   // send location every 10s for active deliveries
   useEffect(() => {
     const activeOrders = orders.filter((o) =>
-      ["Assigned", "Packed", "Out for Delivery"].includes(o.status),
+      ["Ready for Pickup", "Picked Up", "Out for Delivery"].includes(o.status),
     );
 
     if (activeOrders.length === 0 || !tracking) {
@@ -104,6 +104,10 @@ export default function DeliveryDashboard() {
   }, [orders, tracking]);
 
   const handleUpdateStatus = async (orderId: string, status: string) => {
+    if (!["Picked Up", "Out for Delivery"].includes(status)) {
+      toast.error("Delivery partners can only update pickup and delivery progress.");
+      return;
+    }
     try {
       await updateOrderStatus(orderId, status);
       toast.success(`Status updated to ${status}`);

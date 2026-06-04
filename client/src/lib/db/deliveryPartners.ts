@@ -29,7 +29,7 @@ export async function getMyDeliveries(
     .select(PICKUP_FULL)
     .eq("delivery_partner_id", partnerId);
   if (status === "active")
-    query = query.in("status", ["Assigned", "Packed", "Out for Delivery"]);
+    query = query.in("status", ["Ready for Pickup", "Picked Up", "Out for Delivery"]);
   else if (status === "completed")
     query = query.in("status", ["Delivered", "Cancelled"]);
   const { data, error } = await query.order("created_at", { ascending: false });

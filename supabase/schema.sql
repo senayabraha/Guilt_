@@ -545,11 +545,16 @@ begin
 
     order_items := order_items || jsonb_build_object(
       'product', prod.id,
+      'storeId', prod.store_id,
       'name', prod.name,
       'image', prod.image,
       'price', prod.price,
       'quantity', qty,
-      'unit', prod.unit
+      'unit', prod.unit,
+      'prepStatus', 'pending',
+      'pickedQuantity', 0,
+      'unavailableReason', '',
+      'preparedAt', null
     );
     subtotal := subtotal + prod.price * qty;
   end loop;

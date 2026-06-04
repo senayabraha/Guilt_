@@ -10,6 +10,12 @@ import { getMyOrders } from "../lib/db/orders";
 import type { Order } from "../types";
 import { formatCurrency } from "../lib/format";
 
+const statusMessages: Record<string, string> = {
+  Preparing: "Store is preparing your order",
+  "Partially Available": "Some items may be unavailable",
+  "Ready for Pickup": "Order ready for pickup by delivery partner",
+};
+
 const MyOrders = () => {
 
   const [orders, setOrders] = useState<Order[]>([]);
@@ -106,6 +112,11 @@ const MyOrders = () => {
                         })}
                       </span>
                     </div>
+                    {statusMessages[order.status] && (
+                      <p className="mt-2 text-xs font-medium text-app-orange">
+                        {statusMessages[order.status]}
+                      </p>
+                    )}
                   </div>
 
                   {/* right  */}

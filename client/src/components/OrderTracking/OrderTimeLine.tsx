@@ -4,18 +4,22 @@ export default function OrderTimeLine({ order }: { order: any }) {
   const allStatuses = [
     "Placed",
     "Confirmed",
-    "Assigned",
-    "Packed",
+    "Preparing",
+    "Ready for Pickup",
+    "Picked Up",
     "Out for Delivery",
     "Delivered",
   ];
-  const currentIdx = allStatuses.indexOf(order.status);
+  const timelineStatus =
+    order.status === "Partially Available" ? "Ready for Pickup" : order.status;
+  const currentIdx = allStatuses.indexOf(timelineStatus);
 
   const statusIcons: any = {
     Placed: ClockIcon,
     Confirmed: CheckIcon,
-    Assigned: TruckIcon,
-    Packed: PackageIcon,
+    Preparing: PackageIcon,
+    "Ready for Pickup": PackageIcon,
+    "Picked Up": TruckIcon,
     "Out for Delivery": TruckIcon,
     Delivered: CheckIcon,
   };
