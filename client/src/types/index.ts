@@ -90,6 +90,8 @@ export interface CartItem {
   quantity: number;
 }
 
+export type OrderPrepStatus = "pending" | "picked" | "not_available";
+
 export interface OrderItem {
   product: string;
   storeId?: string | null;
@@ -98,6 +100,10 @@ export interface OrderItem {
   price: number;
   quantity: number;
   unit: string;
+  prepStatus?: OrderPrepStatus;
+  pickedQuantity?: number;
+  unavailableReason?: string;
+  preparedAt?: string | null;
 }
 
 export interface DeliveryPartner {

@@ -30,6 +30,7 @@ import VendorDashboard from "./pages/vendor/VendorDashboard";
 import VendorProducts from "./pages/vendor/VendorProducts";
 import VendorProductForm from "./pages/vendor/VendorProductForm";
 import VendorOrders from "./pages/vendor/VendorOrders";
+import VendorOrderPrepare from "./pages/vendor/VendorOrderPrepare";
 import VendorSettings from "./pages/vendor/VendorSettings";
 import VendorApply from "./pages/vendor/VendorApply";
 
@@ -98,6 +99,7 @@ const App = () => {
           {/* Store-scoped dashboard, orders and settings */}
           <Route path="stores/:storeId" element={<VendorDashboard />} />
           <Route path="stores/:storeId/orders" element={<VendorOrders />} />
+          <Route path="orders/:orderId/prepare" element={<VendorOrderPrepare />} />
           <Route path="stores/:storeId/settings" element={<VendorSettings />} />
           {/* Legacy routes: send the vendor to pick a store first */}
           <Route path="orders" element={<Navigate to="/vendor" replace />} />

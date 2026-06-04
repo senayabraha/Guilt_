@@ -1,22 +1,25 @@
 import { useEffect, useState } from "react";
-import { useParams, Navigate, Link } from "react-router-dom";
+import { useParams, Navigate, Link, useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 
-import type { Store } from "../../types";
+import type { Order, Store } from "../../types";
 import Loading from "../../components/Loading";
 import { statusColors } from "../../assets/assets";
 import { getMyStoreById } from "../../lib/db/stores";
-import { getStoreOrders, updateOrderStatus } from "../../lib/db/orders";
+import { getStoreOrders } from "../../lib/db/orders";
+import { startPreparingOrder } from "../../lib/db/vendorOrders";
 import { formatCurrency } from "../../lib/format";
 
-const VENDOR_STATUSES = ["Confirmed", "Packed", "Ready for Pickup", "Cancelled"];
 const FILTERS = [
   "all",
   "Placed",
   "Confirmed",
-  "Packed",
+  "Preparing",
+  "Partially Available",
   "Ready for Pickup",
   "Assigned",
+  "Packed",
+  "Picked Up",
   "Out for Delivery",
   "Delivered",
   "Cancelled",
@@ -24,10 +27,12 @@ const FILTERS = [
 
 export default function VendorOrders() {
   const { storeId } = useParams();
-  const [orders, setOrders] = useState<any[]>([]);
+  const navigate = useNavigate();
+  const [orders, setOrders] = useState<Order[]>([]);
   const [store, setStore] = useState<Store | null>(null);
   const [storeMissing, setStoreMissing] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [actionId, setActionId] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
 
   const fetchOrders = async (status = filter) => {
@@ -57,16 +62,71 @@ export default function VendorOrders() {
   if (!storeId) return <Navigate to="/vendor" replace />;
   if (storeMissing) return <Navigate to="/vendor" replace />;
 
-  const updateStatus = async (id: string, status: string) => {
-    // Vendor UI only offers Confirmed/Packed/Ready for Pickup/Cancelled.
-    if (!VENDOR_STATUSES.includes(status)) return;
+  const handleStartPreparing = async (order: Order) => {
+    const id = order.id || order._id;
+    setActionId(id);
     try {
-      await updateOrderStatus(id, status);
-      toast.success(`Order marked ${status}`);
-      fetchOrders(filter);
+      if (order.status === "Placed" || order.status === "Confirmed") {
+        await startPreparingOrder(id);
+        toast.success("Order preparation started.");
+      }
+      navigate(`/vendor/orders/${id}/prepare`);
     } catch (error: any) {
-      toast.error(error?.message || "Failed to update status");
+      toast.error(error?.message || "Failed to start preparation");
+    } finally {
+      setActionId(null);
     }
+  };
+
+  const renderPreparationAction = (order: Order) => {
+    const id = order.id || order._id;
+    if (order.status === "Placed" || order.status === "Confirmed") {
+      return (
+        <button
+          type="button"
+          disabled={actionId === id}
+          onClick={() => handleStartPreparing(order)}
+          className="px-4 py-2 rounded-xl bg-app-green text-white text-xs font-semibold hover:bg-app-green/90 disabled:opacity-60"
+        >
+          {actionId === id ? "Starting…" : "Start Preparing"}
+        </button>
+      );
+    }
+    if (order.status === "Preparing") {
+      return (
+        <Link
+          to={`/vendor/orders/${id}/prepare`}
+          className="px-4 py-2 rounded-xl bg-app-green text-white text-xs font-semibold hover:bg-app-green/90"
+        >
+          Continue Preparing
+        </Link>
+      );
+    }
+    if (order.status === "Partially Available") {
+      return (
+        <Link
+          to={`/vendor/orders/${id}/prepare`}
+          className="px-4 py-2 rounded-xl bg-amber-100 text-amber-800 text-xs font-semibold hover:bg-amber-200"
+        >
+          Review & Mark Ready
+        </Link>
+      );
+    }
+    if (order.status === "Ready for Pickup") {
+      return (
+        <span className="inline-flex px-3 py-1.5 rounded-full bg-green-100 text-green-700 text-xs font-semibold">
+          Ready for Pickup
+        </span>
+      );
+    }
+    if (order.status === "Cancelled") {
+      return (
+        <span className="inline-flex px-3 py-1.5 rounded-full bg-red-100 text-red-700 text-xs font-semibold">
+          Cancelled
+        </span>
+      );
+    }
+    return <span className="text-xs text-zinc-400">—</span>;
   };
 
   return (
@@ -78,7 +138,6 @@ export default function VendorOrders() {
         ← Store dashboard
       </Link>
 
-      {/* Filter tabs */}
       <div className="flex gap-2 flex-wrap">
         {FILTERS.map((f) => (
           <button
@@ -96,6 +155,9 @@ export default function VendorOrders() {
           <h2 className="text-xl font-semibold text-zinc-900">
             Orders{store?.name ? ` · ${store.name}` : ""}
           </h2>
+          <p className="text-sm text-zinc-500 mt-1">
+            Start preparation, pick each grocery item, and mark ready for delivery partner pickup.
+          </p>
         </div>
         {loading ? (
           <Loading />
@@ -108,28 +170,22 @@ export default function VendorOrders() {
                   <th className="px-6 py-4">Customer</th>
                   <th className="px-6 py-4">Total</th>
                   <th className="px-6 py-4">Status</th>
-                  <th className="px-6 py-4 text-right">Update</th>
+                  <th className="px-6 py-4 text-right">Preparation</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-app-border">
                 {orders.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={5}
-                      className="px-6 py-8 text-center text-zinc-500"
-                    >
+                    <td colSpan={5} className="px-6 py-8 text-center text-zinc-500">
                       No orders found.
                     </td>
                   </tr>
                 ) : (
-                  orders.map((order: any) => (
-                    <tr
-                      key={order.id}
-                      className="hover:bg-zinc-50/50 transition-colors"
-                    >
+                  orders.map((order) => (
+                    <tr key={order.id} className="hover:bg-zinc-50/50 transition-colors">
                       <td className="px-6 py-4">
                         <p className="font-semibold text-zinc-900">
-                          #{order.id.slice(-6).toUpperCase()}
+                          #{(order.id || order._id).slice(-6).toUpperCase()}
                         </p>
                         <p className="text-xs text-zinc-500">
                           {new Date(order.createdAt).toLocaleString()}
@@ -137,7 +193,7 @@ export default function VendorOrders() {
                       </td>
                       <td className="px-6 py-4">
                         <p className="font-medium text-zinc-900">
-                          {order.user?.name || "—"}
+                          {typeof order.user === "object" ? order.user.name : "—"}
                         </p>
                         <p className="text-xs text-zinc-500">
                           {order.items?.length || 0} items
@@ -147,28 +203,12 @@ export default function VendorOrders() {
                         {formatCurrency(order.total)}
                       </td>
                       <td className="px-6 py-4">
-                        <span
-                          className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusColors[order.status] || "bg-zinc-100 text-zinc-600"}`}
-                        >
+                        <span className={`px-2.5 py-1 rounded-full text-xs font-semibold ${statusColors[order.status] || "bg-zinc-100 text-zinc-600"}`}>
                           {order.status}
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <select
-                          value=""
-                          onChange={(e) =>
-                            e.target.value &&
-                            updateStatus(order.id, e.target.value)
-                          }
-                          className="px-3 py-1.5 rounded-lg text-xs font-medium border border-app-border outline-none cursor-pointer bg-white"
-                        >
-                          <option value="">Set status…</option>
-                          {VENDOR_STATUSES.map((s) => (
-                            <option key={s} value={s}>
-                              {s}
-                            </option>
-                          ))}
-                        </select>
+                        {renderPreparationAction(order)}
                       </td>
                     </tr>
                   ))

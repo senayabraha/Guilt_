@@ -116,6 +116,10 @@ export const footerData = {
 export const statusColors: Record<string, string> = {
   Placed: "bg-blue-100 text-blue-700",
   Confirmed: "bg-indigo-100 text-indigo-700",
+  Preparing: "bg-purple-100 text-purple-700",
+  "Partially Available": "bg-amber-100 text-amber-800",
+  "Ready for Pickup": "bg-green-100 text-green-700",
+  "Picked Up": "bg-blue-100 text-blue-700",
   Packed: "bg-purple-100 text-purple-700",
   "Out for Delivery": "bg-app-orange/10 text-app-orange",
   Delivered: "bg-green-100 text-green-700",

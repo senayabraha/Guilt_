@@ -137,19 +137,24 @@ export default function DeliveryOrderCard({
       {/* Actions */}
       {tab === "active" && (
         <div className="px-5 py-3 border-t border-app-border flex flex-wrap gap-2">
-          {(order.status === "Assigned" || order.status === "Packed") && (
+          {(order.status === "Ready for Pickup" || order.status === "Picked Up") && (
             <button
               onClick={() =>
                 handleUpdateStatus(
                   order._id,
-                  order.status === "Assigned" ? "Packed" : "Out for Delivery",
+                  order.status === "Ready for Pickup" ? "Picked Up" : "Out for Delivery",
                 )
               }
               className="px-4 py-2 text-sm font-medium bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 transition-colors flex items-center gap-1.5"
             >
               <TruckIcon className="w-3.5 h-3.5" />
-              {order.status === "Assigned" ? "Mark Packed" : "Out for Delivery"}
+              {order.status === "Ready for Pickup" ? "Mark Picked Up" : "Out for Delivery"}
             </button>
+          )}
+          {!["Ready for Pickup", "Picked Up", "Out for Delivery", "Delivered", "Cancelled"].includes(order.status) && (
+            <p className="px-3 py-2 rounded-xl bg-amber-50 text-amber-800 text-xs font-medium">
+              Store must mark this order Ready for Pickup before pickup.
+            </p>
           )}
           {order.status === "Out for Delivery" && (
             <button
