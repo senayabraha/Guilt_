@@ -3,7 +3,7 @@ import type { Product } from "../types";
 import { Plus, Star } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { formatCurrency } from "../lib/format";
-import ProductQuickView from "./ProductQuickView";
+import ProductDetailModal from "./ProductDetailModal";
 
 interface Props {
   product: Product;
@@ -11,12 +11,12 @@ interface Props {
 
 const ProductCard = ({ product }: Props) => {
   const { addToCart } = useCart();
-  const [showQuickView, setShowQuickView] = useState(false);
+  const [showProductDetails, setShowProductDetails] = useState(false);
 
   return (
     <div
       className="bg-white rounded-2xl overflow-hidden shadow hover:shadow-md transition-all duration-300 group animate-fade-in cursor-pointer"
-      onClick={() => setShowQuickView(true)}
+      onClick={() => setShowProductDetails(true)}
     >
       {/* Image */}
       <div className="relative aspect-square overflow-hidden">
@@ -83,10 +83,10 @@ const ProductCard = ({ product }: Props) => {
         </div>
       </div>
 
-      {showQuickView && (
-        <ProductQuickView
+      {showProductDetails && (
+        <ProductDetailModal
           product={product}
-          onClose={() => setShowQuickView(false)}
+          onClose={() => setShowProductDetails(false)}
         />
       )}
     </div>

@@ -9,6 +9,7 @@ import { getMyStoreById } from "../../lib/db/stores";
 import { getStoreOrders } from "../../lib/db/orders";
 import { startPreparingOrder } from "../../lib/db/vendorOrders";
 import { formatCurrency } from "../../lib/format";
+import VendorOrderDetailModal from "../../components/vendor/VendorOrderDetailModal";
 
 const FILTERS = [
   "all",
@@ -34,6 +35,7 @@ export default function VendorOrders() {
   const [loading, setLoading] = useState(true);
   const [actionId, setActionId] = useState<string | null>(null);
   const [filter, setFilter] = useState("all");
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const fetchOrders = async (status = filter) => {
     if (!storeId) return;
@@ -70,6 +72,7 @@ export default function VendorOrders() {
         await startPreparingOrder(id);
         toast.success("Order preparation started.");
       }
+      setSelectedOrder(null);
       navigate(`/vendor/orders/${id}/prepare`);
     } catch (error: any) {
       toast.error(error?.message || "Failed to start preparation");
@@ -182,7 +185,11 @@ export default function VendorOrders() {
                   </tr>
                 ) : (
                   orders.map((order) => (
-                    <tr key={order.id} className="hover:bg-zinc-50/50 transition-colors">
+                    <tr
+                      key={order.id}
+                      onClick={() => setSelectedOrder(order)}
+                      className="hover:bg-zinc-50/70 transition-colors cursor-pointer focus-within:bg-zinc-50"
+                    >
                       <td className="px-6 py-4">
                         <p className="font-semibold text-zinc-900">
                           #{(order.id || order._id).slice(-6).toUpperCase()}
@@ -190,6 +197,16 @@ export default function VendorOrders() {
                         <p className="text-xs text-zinc-500">
                           {new Date(order.createdAt).toLocaleString()}
                         </p>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedOrder(order);
+                          }}
+                          className="mt-2 text-xs font-semibold text-app-green hover:text-app-green/80"
+                        >
+                          View details
+                        </button>
                       </td>
                       <td className="px-6 py-4">
                         <p className="font-medium text-zinc-900">
@@ -207,7 +224,7 @@ export default function VendorOrders() {
                           {order.status}
                         </span>
                       </td>
-                      <td className="px-6 py-4 text-right">
+                      <td className="px-6 py-4 text-right" onClick={(e) => e.stopPropagation()}>
                         {renderPreparationAction(order)}
                       </td>
                     </tr>
@@ -218,6 +235,15 @@ export default function VendorOrders() {
           </div>
         )}
       </div>
+
+      {selectedOrder && (
+        <VendorOrderDetailModal
+          order={selectedOrder}
+          actionLoading={actionId === (selectedOrder.id || selectedOrder._id)}
+          onClose={() => setSelectedOrder(null)}
+          onPrepare={handleStartPreparing}
+        />
+      )}
     </div>
   );
 }
