@@ -63,7 +63,7 @@ create table public.products (
   store_id uuid references public.stores(id) on delete cascade,
   name text not null,
   description text default '',
-  images jsonb not null default '[]'::jsonb,
+  images text[] not null default '{}',
   specifications text default '',
   price numeric not null,
   original_price numeric default 0,
