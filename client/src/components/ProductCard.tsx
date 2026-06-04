@@ -1,8 +1,9 @@
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import type { Product } from "../types";
 import { Plus, Star } from "lucide-react";
 import { useCart } from "../context/CartContext";
 import { formatCurrency } from "../lib/format";
+import ProductQuickView from "./ProductQuickView";
 
 interface Props {
   product: Product;
@@ -10,12 +11,12 @@ interface Props {
 
 const ProductCard = ({ product }: Props) => {
   const { addToCart } = useCart();
-  const navigate = useNavigate();
+  const [showQuickView, setShowQuickView] = useState(false);
 
   return (
     <div
       className="bg-white rounded-2xl overflow-hidden shadow hover:shadow-md transition-all duration-300 group animate-fade-in cursor-pointer"
-      onClick={() => navigate(`/products/${product.id}`)}
+      onClick={() => setShowQuickView(true)}
     >
       {/* Image */}
       <div className="relative aspect-square overflow-hidden">
@@ -81,6 +82,13 @@ const ProductCard = ({ product }: Props) => {
           </button>
         </div>
       </div>
+
+      {showQuickView && (
+        <ProductQuickView
+          product={product}
+          onClose={() => setShowQuickView(false)}
+        />
+      )}
     </div>
   );
 };

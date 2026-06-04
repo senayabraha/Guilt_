@@ -149,6 +149,14 @@ export function mapProduct(row: any): Product {
     originalPrice && price && originalPrice > price
       ? Math.round(((originalPrice - price) / originalPrice) * 100)
       : 0;
+  // Backward compatible: products may store a single `image` and/or an
+  // `images` array. images[0] is the primary; fall back to the legacy column.
+  const images: string[] =
+    Array.isArray(row.images) && row.images.length
+      ? row.images.filter(Boolean)
+      : row.image
+        ? [row.image]
+        : [];
   return {
     _id: row.id,
     id: row.id,
@@ -156,9 +164,11 @@ export function mapProduct(row: any): Product {
     store: row.store ? mapStore(row.store) : null,
     name: row.name,
     description: row.description ?? "",
+    specifications: row.specifications ?? "",
     price,
     originalPrice,
-    image: row.image,
+    image: row.image || images[0] || "",
+    images,
     category: row.category,
     unit: row.unit ?? "piece",
     stock: row.stock ?? 0,
@@ -176,12 +186,20 @@ export function toProductRow(form: any, storeId?: string | null) {
   const map: Record<string, string> = {
     name: "name",
     description: "description",
+    specifications: "specifications",
     image: "image",
     category: "category",
     unit: "unit",
   };
   for (const [camel, snake] of Object.entries(map)) {
     if (form[camel] !== undefined) row[snake] = form[camel];
+  }
+  // Multi-image support: `images` is an array of URLs whose first entry is the
+  // primary. Keep the legacy `image` column in sync with the primary image.
+  if (Array.isArray(form.images)) {
+    const images = form.images.filter(Boolean);
+    row.images = images;
+    if (images.length) row.image = images[0];
   }
   if (form.price !== undefined) row.price = Number(form.price);
   if (form.originalPrice !== undefined)

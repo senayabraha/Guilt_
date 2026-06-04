@@ -63,6 +63,8 @@ create table public.products (
   store_id uuid references public.stores(id) on delete cascade,
   name text not null,
   description text default '',
+  images jsonb not null default '[]'::jsonb,
+  specifications text default '',
   price numeric not null,
   original_price numeric default 0,
   image text not null,
@@ -190,6 +192,47 @@ as $$
   );
 $$;
 
+-- SECURITY DEFINER helpers used inside RLS policies to break the mutual
+-- recursion between orders and delivery_partners policies. Because they run as
+-- the function owner they bypass RLS on the queried tables, so a policy on one
+-- table no longer triggers the other table's policy.
+create or replace function public.is_assigned_partner(p_partner_id uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.delivery_partners dp
+    where dp.id = p_partner_id
+      and dp.auth_user_id = auth.uid()
+  );
+$$;
+
+grant execute on function public.is_assigned_partner(uuid) to authenticated;
+
+create or replace function public.can_view_partner(p_partner_id uuid)
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.orders o
+    where o.delivery_partner_id = p_partner_id
+      and o.user_id = auth.uid()
+  ) or exists (
+    select 1 from public.orders o
+    join public.stores s on s.id = o.store_id
+    where o.delivery_partner_id = p_partner_id
+      and s.owner_id = auth.uid()
+  );
+$$;
+
+grant execute on function public.can_view_partner(uuid) to authenticated;
+
 alter table public.profiles enable row level security;
 alter table public.addresses enable row level security;
 alter table public.stores enable row level security;
@@ -308,11 +351,7 @@ using (
     where s.id = store_id
     and s.owner_id = auth.uid()
   )
-  or exists (
-    select 1 from public.delivery_partners dp
-    where dp.id = delivery_partner_id
-    and dp.auth_user_id = auth.uid()
-  )
+  or public.is_assigned_partner(delivery_partner_id)
 );
 
 create policy "orders insert own"
@@ -331,11 +370,7 @@ using (
     where s.id = store_id
     and s.owner_id = auth.uid()
   )
-  or exists (
-    select 1 from public.delivery_partners dp
-    where dp.id = delivery_partner_id
-    and dp.auth_user_id = auth.uid()
-  )
+  or public.is_assigned_partner(delivery_partner_id)
 )
 with check (
   user_id = auth.uid()
@@ -345,11 +380,7 @@ with check (
     where s.id = store_id
     and s.owner_id = auth.uid()
   )
-  or exists (
-    select 1 from public.delivery_partners dp
-    where dp.id = delivery_partner_id
-    and dp.auth_user_id = auth.uid()
-  )
+  or public.is_assigned_partner(delivery_partner_id)
 );
 
 -- DELIVERY PARTNERS
@@ -361,17 +392,7 @@ for select
 using (
   public.is_admin()
   or auth_user_id = auth.uid()
-  or exists (
-    select 1 from public.orders o
-    where o.delivery_partner_id = delivery_partners.id
-    and o.user_id = auth.uid()
-  )
-  or exists (
-    select 1 from public.orders o
-    join public.stores s on s.id = o.store_id
-    where o.delivery_partner_id = delivery_partners.id
-    and s.owner_id = auth.uid()
-  )
+  or public.can_view_partner(id)
 );
 
 create policy "delivery partners admin manage"

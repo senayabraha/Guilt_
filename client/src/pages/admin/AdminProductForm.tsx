@@ -4,8 +4,8 @@ import { ArrowLeftIcon } from "lucide-react";
 
 import { categoriesData } from "../../assets/assets";
 import Loading from "../../components/Loading";
+import MultiImageUpload from "../../components/MultiImageUpload";
 import { getProduct, createProduct, updateProduct } from "../../lib/db/products";
-import { uploadProductImage } from "../../lib/storage";
 import toast from "react-hot-toast";
 
 export default function AdminProductForm() {
@@ -15,11 +15,12 @@ export default function AdminProductForm() {
 
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [images, setImages] = useState<string[]>([]);
 
   const [formData, setFormData] = useState({
     name: "",
     description: "",
+    specifications: "",
     price: "",
     originalPrice: "",
     image: "",
@@ -42,6 +43,7 @@ export default function AdminProductForm() {
           setFormData({
             name: p.name,
             description: p.description,
+            specifications: p.specifications || "",
             price: p.price.toString(),
             originalPrice: p.originalPrice ? p.originalPrice.toString() : "",
             image: p.image,
@@ -50,6 +52,7 @@ export default function AdminProductForm() {
             stock: p.stock.toString(),
             isOrganic: p.isOrganic,
           });
+          setImages(p.images && p.images.length ? p.images : p.image ? [p.image] : []);
         }
       } catch (error: any) {
         toast.error(error?.message || "Failed to load data");
@@ -64,21 +67,17 @@ export default function AdminProductForm() {
     e.preventDefault();
     setSaving(true);
     try {
-      let finalImageUrl = formData.image;
-
-      if (imageFile) {
-        finalImageUrl = await uploadProductImage(imageFile);
-      }
-
-      if (!finalImageUrl) {
-        toast.error("Please upload a product image");
+      if (!images.length) {
+        toast.error("Please upload at least one product image");
         setSaving(false);
         return;
       }
 
       const payload = {
         ...formData,
-        image: finalImageUrl,
+        image: images[0],
+        images,
+        specifications: formData.specifications,
         price: Number(formData.price),
         originalPrice: formData.originalPrice
           ? Number(formData.originalPrice)
@@ -218,29 +217,9 @@ export default function AdminProductForm() {
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-zinc-700 mb-2">
-                  Product Image
+                  Product Images
                 </label>
-                <div className="flex items-center gap-4">
-                  {(imageFile || formData.image) && (
-                    <div className="size-16 rounded-lg border border-zinc-200 overflow-hidden shrink-0 bg-app-cream">
-                      <img
-                        src={
-                          imageFile
-                            ? URL.createObjectURL(imageFile)
-                            : formData.image
-                        }
-                        alt="Preview"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                    className="w-full px-4 py-2.5 rounded-lg border border-zinc-200 focus:border-app-green outline-none transition-all file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-app-orange file:text-white hover:file:bg-orange-600 cursor-pointer"
-                  />
-                </div>
+                <MultiImageUpload images={images} onChange={setImages} />
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-zinc-700 mb-2">
@@ -252,6 +231,20 @@ export default function AdminProductForm() {
                   value={formData.description}
                   onChange={(e) =>
                     setFormData({ ...formData, description: e.target.value })
+                  }
+                  className="w-full px-4 py-2.5 rounded-lg border border-zinc-200 focus:border-app-green focus:ring-1 focus:ring-app-green outline-none transition-all resize-none"
+                />
+              </div>
+              <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-zinc-700 mb-2">
+                  Specifications
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. Weight: 1kg • Origin: Ethiopia • Storage: keep refrigerated"
+                  value={formData.specifications}
+                  onChange={(e) =>
+                    setFormData({ ...formData, specifications: e.target.value })
                   }
                   className="w-full px-4 py-2.5 rounded-lg border border-zinc-200 focus:border-app-green focus:ring-1 focus:ring-app-green outline-none transition-all resize-none"
                 />

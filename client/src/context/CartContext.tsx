@@ -41,16 +41,21 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const addToCart = (product: Product, quantity = 1) => {
     const incomingStoreId = getProductStoreId(product);
 
+    // Enforce one-store carts (compute from current items, not inside setState).
+    const currentStoreId = items.find((item) => getProductStoreId(item.product))
+      ? getProductStoreId(
+          items.find((item) => getProductStoreId(item.product))!.product,
+        )
+      : null;
+
+    if (currentStoreId && incomingStoreId && currentStoreId !== incomingStoreId) {
+      toast.error(
+        "Your cart already contains items from another store. Clear cart to shop from this store.",
+      );
+      return;
+    }
+
     setItems((prev) => {
-      const cartStoreId = prev.find((item) => getProductStoreId(item.product))
-        ? getProductStoreId(prev.find((item) => getProductStoreId(item.product))!.product)
-        : null;
-
-      if (cartStoreId && incomingStoreId && cartStoreId !== incomingStoreId) {
-        toast.error("Your cart already contains items from another store. Clear cart to shop from this store.");
-        return prev;
-      }
-
       const productId = getProductId(product);
       const existing = prev.find((item) => getProductId(item.product) === productId);
       if (existing) {
@@ -62,7 +67,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
       }
       return [...prev, { product, quantity }];
     });
-    setIsCartOpen(true);
+
+    // Keep the customer on the current page; just confirm with a toast.
+    // The cart only opens when they tap the cart button in the navbar.
+    toast.success("Added to cart");
   };
 
   const removeFromCart = (productId: string) => {

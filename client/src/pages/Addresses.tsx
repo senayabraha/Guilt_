@@ -97,6 +97,18 @@ const Addresses = () => {
       });
   }, []);
 
+  // Defensive: collapse exact-duplicate rows so the list never shows the same
+  // address twice (the underlying query returns each DB row as-is).
+  const seen = new Set<string>();
+  const uniqueAddresses = addresses.filter((a) => {
+    const sig = [a.label, a.zip, a.city, a.state, a.address, a.lat, a.lng]
+      .join("|")
+      .toLowerCase();
+    if (seen.has(sig)) return false;
+    seen.add(sig);
+    return true;
+  });
+
   return (
     <div className="min-h-screen bg-app-cream">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
@@ -130,7 +142,7 @@ const Addresses = () => {
         {/* Addresses List */}
         {loading ? (
           <Loading />
-        ) : addresses.length === 0 ? (
+        ) : uniqueAddresses.length === 0 ? (
           <div className="text-center py-16">
             <MapPinIcon className="size-16 text-app-border mx-auto mb-4" />
             <h2 className="text-lg font-semibold text-app-green mb-2">
@@ -142,7 +154,7 @@ const Addresses = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {addresses.map((addr) => (
+            {uniqueAddresses.map((addr) => (
               <AddressCard
                 key={addr.id}
                 addr={addr}

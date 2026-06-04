@@ -23,9 +23,11 @@ export async function placeOrder(params: {
 }
 
 export async function getMyOrders(status?: string): Promise<Order[]> {
+  // The customer order list doesn't render the delivery partner, so we skip
+  // embedding delivery_partners (keeps the list independent of that table).
   let query = supabase
     .from("orders")
-    .select("*, store:stores(*), delivery_partner:delivery_partners(*)")
+    .select("*, store:stores(*)")
     .or(PAID_OR_NOT_CARD);
   if (status && status !== "all") query = query.eq("status", status);
   const { data, error } = await query.order("created_at", { ascending: false });

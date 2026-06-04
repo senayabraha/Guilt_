@@ -37,12 +37,9 @@ const MyOrders = () => {
     if (searchParams.get("clearCart")) {
       clearCart();
       setSearchParams({});
-      setTimeout(() => {
-        fetchOrders();
-      }, 2000);
-    } else {
-      fetchOrders();
     }
+    fetchOrders();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   return (
@@ -53,7 +50,7 @@ const MyOrders = () => {
         </h1>
 
         {/* Tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto pb-2">
+        <div className="flex gap-2 mb-6 overflow-x-auto no-scrollbar pb-2 -mx-4 px-4 sm:mx-0 sm:px-0">
           {tabs.map((tab) => (
             <button
               key={tab}

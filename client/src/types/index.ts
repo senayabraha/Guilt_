@@ -69,9 +69,11 @@ export interface Product {
   store?: Store | null;
   name: string;
   description: string;
+  specifications?: string;
   price: number;
   originalPrice: number;
   image: string;
+  images?: string[];
   category: string;
   unit: string;
   stock: number;
