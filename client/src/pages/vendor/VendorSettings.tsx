@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { categoriesData } from "../../assets/assets";
 import Loading from "../../components/Loading";
 import ImageCropUpload from "../../components/ImageCropUpload";
+import MapPinPicker from "../../components/MapPinPicker";
 import { getMyStore, updateMyStore } from "../../lib/db/stores";
 
 const storeStatusColors: Record<string, string> = {
@@ -33,6 +34,8 @@ export default function VendorSettings() {
     deliveryFee: "",
     minOrder: "",
     isOpen: true,
+    lat: 0,
+    lng: 0,
   });
 
   useEffect(() => {
@@ -61,6 +64,8 @@ export default function VendorSettings() {
           deliveryFee: (s.deliveryFee ?? "").toString(),
           minOrder: (s.minOrder ?? "").toString(),
           isOpen: s.isOpen ?? true,
+          lat: s.lat ?? 0,
+          lng: s.lng ?? 0,
         });
       } catch (error: any) {
         toast.error(error?.response?.data?.message || "No store found");
@@ -161,7 +166,7 @@ export default function VendorSettings() {
           </div>
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Address
+              Store pickup instructions
             </label>
             <input
               type="text"
@@ -201,6 +206,17 @@ export default function VendorSettings() {
               value={form.zip}
               onChange={(e) => update("zip", e.target.value)}
               className={inputClass}
+            />
+          </div>
+          <div className="md:col-span-2">
+            <MapPinPicker
+              label="Store pickup location"
+              lat={form.lat}
+              lng={form.lng}
+              onChange={(c) =>
+                setForm((prev) => ({ ...prev, lat: c.lat, lng: c.lng }))
+              }
+              helperText="Your store pin helps delivery partners find the pickup point."
             />
           </div>
           <ImageCropUpload

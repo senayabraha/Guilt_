@@ -57,12 +57,30 @@ const Checkout = () => {
     try {
       // Temporary cash/test flow: validation, totals, order creation, and stock
       // decrement happen server-side in the place_order RPC. No Stripe required.
+      // shipping_address is stored as JSON. Include the new Addis-focused keys
+      // (fullName/phone/area/instructions) plus legacy keys so existing order
+      // displays keep working.
+      const shippingAddress = {
+        fullName: address.label,
+        phone: address.zip,
+        city: address.city,
+        area: address.state,
+        instructions: address.address,
+        lat: address.lat,
+        lng: address.lng,
+        // legacy keys
+        label: address.label,
+        address: address.address,
+        state: address.state,
+        zip: address.zip,
+      };
+
       const orderId = await placeOrder({
         items: items.map((item) => ({
           product: item.product.id || item.product._id,
           quantity: item.quantity,
         })),
-        shippingAddress: address,
+        shippingAddress,
       });
 
       clearCart();

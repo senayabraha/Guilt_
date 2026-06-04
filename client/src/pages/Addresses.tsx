@@ -23,68 +23,38 @@ const Addresses = () => {
   const [form, setForm] = useState({
     label: "",
     address: "",
-    city: "",
+    city: "Addis Ababa",
     state: "",
     zip: "",
     isDefault: false,
+    lat: 0,
+    lng: 0,
   });
 
   const resetForm = () => {
     setForm({
       label: "",
       address: "",
-      city: "",
+      city: "Addis Ababa",
       state: "",
       zip: "",
       isDefault: false,
+      lat: 0,
+      lng: 0,
     });
     setShowForm(false);
     setEditingId(null);
   };
 
-  const getLocation = (retries = 3): Promise<{ lat: number; lng: number }> => {
-    return new Promise((resolve, reject) => {
-      if (!navigator.geolocation) {
-        reject(new Error("Geolocation not supported"));
-        return;
-      }
-
-      const attempt = () => {
-        navigator.geolocation.getCurrentPosition(
-          (position) => {
-            resolve({
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-            });
-          },
-          (error: any) => {
-            if (retries > 0) {
-              retries--;
-              setTimeout(attempt, 1000);
-            } else {
-              reject(
-                new Error(
-                  error.message || "Failed to get location after retries",
-                ),
-              );
-            }
-          },
-          {
-            enableHighAccuracy: false,
-            timeout: 15000,
-            maximumAge: 60000,
-          },
-        );
-      };
-      attempt();
-    });
-  };
-
   const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
+    // The map pin (lat/lng) is required so delivery partners can find the spot.
+    if (!form.lat || !form.lng) {
+      toast.error("Drop a pin or use your current location on the map.");
+      return;
+    }
     try {
-      const coords = await getLocation();
-      const payload = { ...form, ...coords };
+      const payload = { ...form };
 
       if (editingId) {
         await updateAddress(editingId, payload);
@@ -105,10 +75,12 @@ const Addresses = () => {
     setForm({
       label: add.label,
       address: add.address,
-      city: add.city,
+      city: add.city || "Addis Ababa",
       state: add.state,
       zip: add.zip,
       isDefault: add.isDefault,
+      lat: add.lat || 0,
+      lng: add.lng || 0,
     });
     setEditingId(add.id || add._id);
     setShowForm(true);

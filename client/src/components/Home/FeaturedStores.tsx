@@ -3,18 +3,23 @@ import { ChevronRightIcon, ShoppingBasketIcon, StoreIcon } from "lucide-react";
 
 import type { Store } from "../../types";
 import { formatCurrency } from "../../lib/format";
+import { sortStoresByDistance } from "../../lib/geo";
 
 interface Props {
   stores: Store[];
   loading: boolean;
+  pin?: { lat: number; lng: number } | null;
 }
 
 // Compact Instacart-style store logo grid: square logo tile, store name, a
 // small "Open" badge, and delivery fee. Store-first browsing — tapping a tile
 // opens that store's detail page. No vendor/delivery CTAs in this section.
-const FeaturedStores = ({ stores, loading }: Props) => {
+const FeaturedStores = ({ stores, loading, pin }: Props) => {
   const gridClass =
     "grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-x-3 gap-y-4";
+
+  // Closest stores first when a delivery pin is set.
+  const ordered = pin ? sortStoresByDistance(stores, pin) : stores;
 
   return (
     <section className="mb-8">
@@ -43,7 +48,7 @@ const FeaturedStores = ({ stores, loading }: Props) => {
         </div>
       ) : stores.length > 0 ? (
         <div className={gridClass}>
-          {stores.slice(0, 15).map((store) => (
+          {ordered.slice(0, 15).map((store) => (
             <Link
               key={store.id}
               to={`/stores/${store.id}`}

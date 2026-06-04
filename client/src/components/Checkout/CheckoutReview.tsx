@@ -28,13 +28,23 @@ export default function CheckoutReview({
         <div className="flex items-center gap-2 mb-2">
           <TruckIcon className="size-4 text-app-green" />
           <span className="text-sm font-semibold text-app-green">
-            Delivery Address
+            Deliver to
           </span>
         </div>
-        <p className="text-sm text-app-text-light">
-          {address.label} — {address.address}, {address.city}, {address.state}{" "}
-          {address.zip}
+        <p className="text-sm font-medium text-app-green">
+          {address.label}
+          {address.zip ? ` · ${address.zip}` : ""}
         </p>
+        <p className="text-sm text-app-text-light">
+          {address.city}
+          {address.state ? `, ${address.state}` : ""}
+        </p>
+        {address.address && (
+          <p className="text-sm text-app-text-light">{address.address}</p>
+        )}
+        {address.lat && address.lng ? (
+          <p className="text-xs text-app-success mt-1">Pinned location saved</p>
+        ) : null}
       </div>
 
       {/* Items */}

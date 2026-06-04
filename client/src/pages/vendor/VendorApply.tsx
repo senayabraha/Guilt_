@@ -9,6 +9,7 @@ import { useAuth } from "../../context/AuthContext";
 import { applyForStore, getMyStore } from "../../lib/db/stores";
 import { becomeVendor } from "../../lib/db/profiles";
 import ImageCropUpload from "../../components/ImageCropUpload";
+import MapPinPicker from "../../components/MapPinPicker";
 
 interface Props {
   /** Render without the page wrapper (e.g. embedded on the dashboard). */
@@ -36,6 +37,8 @@ export default function VendorApply({ embedded, onApplied }: Props) {
     deliveryRadius: "5",
     deliveryFee: "50",
     minOrder: "0",
+    lat: 0,
+    lng: 0,
   });
   const [categories, setCategories] = useState<string[]>([]);
 
@@ -54,6 +57,9 @@ export default function VendorApply({ embedded, onApplied }: Props) {
     Boolean(form.address.trim()) &&
     Boolean(form.city.trim()) &&
     Boolean(form.state.trim()) &&
+    Boolean(form.phone.trim()) &&
+    form.lat !== 0 &&
+    form.lng !== 0 &&
     !saving;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -72,7 +78,13 @@ export default function VendorApply({ embedded, onApplied }: Props) {
       return;
     }
     if (!form.address.trim() || !form.city.trim() || !form.state.trim()) {
-      toast.error("Address, city, and sub-city / area are required.");
+      toast.error(
+        "Store pickup instructions, city, and sub-city / area are required.",
+      );
+      return;
+    }
+    if (form.lat === 0 || form.lng === 0) {
+      toast.error("Drop your store pickup pin on the map.");
       return;
     }
     if (categories.length === 0) {
@@ -201,14 +213,14 @@ export default function VendorApply({ embedded, onApplied }: Props) {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           <div className="md:col-span-2">
             <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Address *
+              Store pickup instructions *
             </label>
             <input
               required
               type="text"
               value={form.address}
               onChange={(e) => update("address", e.target.value)}
-              placeholder="e.g. Bole Medhanialem, near Edna Mall"
+              placeholder="Example: Ask cashier for Zembil orders. Store entrance faces the main road."
               className={inputClass}
             />
           </div>
@@ -271,6 +283,20 @@ export default function VendorApply({ embedded, onApplied }: Props) {
               value={form.zip}
               onChange={(e) => update("zip", e.target.value)}
               className={inputClass}
+            />
+          </div>
+          <div className="md:col-span-2 space-y-2">
+            <p className="text-xs text-app-text-light">
+              Place the pin where delivery partners should pick up orders.
+            </p>
+            <MapPinPicker
+              label="Store pickup location"
+              lat={form.lat}
+              lng={form.lng}
+              onChange={(c) =>
+                setForm((prev) => ({ ...prev, lat: c.lat, lng: c.lng }))
+              }
+              helperText="Your store pin helps delivery partners find the pickup point."
             />
           </div>
         </div>

@@ -40,14 +40,41 @@ const CheckoutAddress = ({ addresses, address, setAddress, setStep }: any) => {
                     </span>
                   )}
                 </div>
-                <p className="text-sm text-zinc-600 truncate">{addr.address}</p>
+                {addr.zip && (
+                  <p className="text-xs text-zinc-500">{addr.zip}</p>
+                )}
                 <p className="text-xs text-zinc-500">
-                  {addr.city}, {addr.state} {addr.zip}
+                  {addr.city}
+                  {addr.state ? `, ${addr.state}` : ""}
                 </p>
+                {addr.address && (
+                  <p className="text-sm text-zinc-600 truncate">
+                    {addr.address}
+                  </p>
+                )}
+                {addr.lat && addr.lng ? (
+                  <p className="text-[11px] text-app-success mt-0.5">
+                    Pinned location saved
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-app-orange mt-0.5">
+                    No map pin — edit to add one
+                  </p>
+                )}
               </div>
             ))}
           </div>
         </div>
+      )}
+
+      {address.address && (!address.lat || !address.lng) && (
+        <p className="text-xs text-app-orange mt-4">
+          This address has no map pin. Add a pin from{" "}
+          <Link to="/addresses" className="underline font-medium">
+            My Addresses
+          </Link>{" "}
+          so delivery partners can find you.
+        </p>
       )}
       <Link
         to="/addresses"
@@ -60,7 +87,7 @@ const CheckoutAddress = ({ addresses, address, setAddress, setStep }: any) => {
           setStep("payment");
           scrollTo(0, 0);
         }}
-        disabled={!address.address || !address.city}
+        disabled={!address.address || !address.city || !address.lat || !address.lng}
         className="mt-6 px-6 py-3 bg-app-green text-white font-semibold rounded-xl hover:bg-app-green-light transition-colors disabled:opacity-50 flex items-center gap-2"
       >
         Continue to Payment <ChevronRightIcon className="size-4" />

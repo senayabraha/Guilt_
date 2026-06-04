@@ -11,10 +11,12 @@ import Newsletter from "../components/Home/Newsletter";
 
 import type { Store } from "../types";
 import { getPublicStores } from "../lib/db/stores";
+import { getSavedPin, type SavedPin } from "../lib/areas";
 
 const Home = () => {
   const [stores, setStores] = useState<Store[]>([]);
   const [storesLoading, setStoresLoading] = useState(true);
+  const [pin, setPin] = useState<SavedPin | null>(() => getSavedPin());
 
   useEffect(() => {
     getPublicStores()
@@ -26,13 +28,13 @@ const Home = () => {
   return (
     <div className="min-h-screen max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
       {/* Location + search (top) */}
-      <HomeSearch />
+      <HomeSearch onPinChange={setPin} />
 
       {/* Horizontal quick tabs */}
       <QuickTabs />
 
-      {/* Featured stores grid (store-first) */}
-      <FeaturedStores stores={stores} loading={storesLoading} />
+      {/* Featured stores grid (store-first, nearest first when a pin is set) */}
+      <FeaturedStores stores={stores} loading={storesLoading} pin={pin} />
 
       {/* Compact promo / hero card */}
       <Hero />

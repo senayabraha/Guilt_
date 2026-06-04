@@ -47,9 +47,19 @@ const AddressCard = ({
               </span>
             )}
           </div>
+          {addr.zip && (
+            <p className="text-sm text-app-text-light">{addr.zip}</p>
+          )}
           <p className="text-sm text-app-text-light">
-            {addr.address}, {addr.city}, <br /> {addr.state}, {addr.zip}
+            {addr.city}
+            {addr.state ? `, ${addr.state}` : ""}
           </p>
+          {addr.address && (
+            <p className="text-sm text-app-text-light">{addr.address}</p>
+          )}
+          {addr.lat && addr.lng ? (
+            <p className="text-xs text-app-success mt-1">Pinned location saved</p>
+          ) : null}
         </div>
       </div>
 

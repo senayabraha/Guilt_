@@ -1,8 +1,10 @@
 import {
   CheckCircleIcon,
   ClockIcon,
+  ExternalLinkIcon,
   MapPinIcon,
   PhoneIcon,
+  StoreIcon,
   TruckIcon,
   XCircleIcon,
 } from "lucide-react";
@@ -30,6 +32,19 @@ export default function DeliveryOrderCard({
       ? order.user
       : { name: "Customer", email: "", phone: "" };
 
+  const store = order.store;
+  const ship = (order.shippingAddress as any) || {};
+
+  const hasStorePin =
+    !!store && !!store.lat && !!store.lng && !(store.lat === 0 && store.lng === 0);
+  const hasDropPin =
+    !!ship.lat && !!ship.lng && !(ship.lat === 0 && ship.lng === 0);
+
+  const dropName = ship.fullName || user.name;
+  const dropPhone = ship.phone || user.phone;
+  const dropArea = ship.area || ship.state;
+  const dropInstructions = ship.instructions || ship.address;
+
   return (
     <div
       key={order._id}
@@ -53,31 +68,63 @@ export default function DeliveryOrderCard({
       </div>
 
       {/* Body */}
-      <div className="px-5 py-4 space-y-3">
-        {/* Customer */}
-        <div className="flex items-center gap-2 text-sm">
-          <div className="size-8 rounded-full bg-app-cream flex-center">
-            <span className="text-xs font-semibold text-app-green">
-              {user.name?.charAt(0)}
-            </span>
-          </div>
-          <div>
-            <p className="font-medium text-zinc-900">{user.name}</p>
-            {user.phone && (
-              <p className="text-xs text-zinc-500 flex items-center gap-1">
-                <PhoneIcon className="size-3" /> {user.phone}
+      <div className="px-5 py-4 space-y-4">
+        {/* Pickup (from store) */}
+        {store && (
+          <div className="space-y-1.5 text-sm text-zinc-600">
+            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-app-green">
+              <StoreIcon className="size-3.5" /> Pickup
+            </p>
+            <p className="font-medium text-zinc-900">{store.name}</p>
+            {store.phone && (
+              <p className="flex items-center gap-1 text-xs text-zinc-500">
+                <PhoneIcon className="size-3" /> {store.phone}
               </p>
             )}
+            {(store.state || store.city) && (
+              <p className="text-sm">
+                {store.state}
+                {store.state && store.city ? ", " : ""}
+                {store.city}
+              </p>
+            )}
+            {store.address && <p className="text-sm">{store.address}</p>}
+            {hasStorePin && (
+              <a
+                href={`https://www.google.com/maps?q=${store.lat},${store.lng}`}
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-1 text-xs font-medium text-app-green hover:underline"
+              >
+                <ExternalLinkIcon className="size-3" /> Open pickup in Google Maps
+              </a>
+            )}
           </div>
-        </div>
+        )}
 
-        {/* Address */}
-        <div className="flex items-start gap-2 text-sm text-zinc-600">
-          <MapPinIcon className="size-4 text-app-green shrink-0 mt-0.5" />
-          <p>
-            {order.shippingAddress.address}, {order.shippingAddress.city},{" "}
-            {order.shippingAddress.state} {order.shippingAddress.zip}
+        {/* Dropoff (to customer) */}
+        <div className="space-y-1.5 text-sm text-zinc-600">
+          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-app-green">
+            <MapPinIcon className="size-3.5" /> Dropoff
           </p>
+          {dropName && <p className="font-medium text-zinc-900">{dropName}</p>}
+          {dropPhone && (
+            <p className="flex items-center gap-1 text-xs text-zinc-500">
+              <PhoneIcon className="size-3" /> {dropPhone}
+            </p>
+          )}
+          {dropArea && <p className="text-sm">{dropArea}</p>}
+          {dropInstructions && <p className="text-sm">{dropInstructions}</p>}
+          {hasDropPin && (
+            <a
+              href={`https://www.google.com/maps?q=${ship.lat},${ship.lng}`}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 text-xs font-medium text-app-green hover:underline"
+            >
+              <ExternalLinkIcon className="size-3" /> Open dropoff in Google Maps
+            </a>
+          )}
         </div>
 
         {/* Items count */}

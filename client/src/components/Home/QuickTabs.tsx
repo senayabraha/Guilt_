@@ -3,8 +3,8 @@ import { Link } from "react-router-dom";
 import {
   HomeIcon,
   LayoutGridIcon,
+  NavigationIcon,
   PackageIcon,
-  StoreIcon,
   TagIcon,
 } from "lucide-react";
 
@@ -20,8 +20,8 @@ interface Tab {
 
 const tabs: Tab[] = [
   { label: "Home", icon: HomeIcon, to: "/", active: true },
+  { label: "Nearby Stores", icon: NavigationIcon, to: "/stores?nearby=1" },
   { label: "Deals", icon: TagIcon, to: "/deals" },
-  { label: "Stores", icon: StoreIcon, to: "/stores" },
   { label: "Categories", icon: LayoutGridIcon, scrollTo: "categories" },
   { label: "Orders", icon: PackageIcon, to: "/orders" },
 ];
@@ -50,12 +50,12 @@ const QuickTabs = () => {
               className={tabClass(tab.active)}
             >
               <tab.icon className="size-5" />
-              <span className="text-xs font-medium">{tab.label}</span>
+              <span className="text-xs font-medium whitespace-nowrap">{tab.label}</span>
             </button>
           ) : (
             <Link key={tab.label} to={tab.to!} className={tabClass(tab.active)}>
               <tab.icon className="size-5" />
-              <span className="text-xs font-medium">{tab.label}</span>
+              <span className="text-xs font-medium whitespace-nowrap">{tab.label}</span>
             </Link>
           ),
         )}
