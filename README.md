@@ -113,6 +113,12 @@ npm run build
 
 ---
 
+## Product Understanding
+
+A part-by-part product and technical understanding of the current marketplace is available in [`docs/marketplace-understanding.md`](docs/marketplace-understanding.md).
+
+---
+
 ## Roadmap
 
 - Activate Stripe payments

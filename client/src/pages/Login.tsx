@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { heroSectionData } from "../assets/assets";
 import zembilLogo from "../assets/zembil-logo.svg";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import {
   EyeIcon,
   EyeOffIcon,
@@ -23,13 +23,16 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
 
   const { login, register } = useAuth();
+  const location = useLocation();
+  const redirectTo =
+    typeof location.state?.from === "string" ? location.state.from : "/";
 
   const handleSubmit = async (e: React.SubmitEvent) => {
     e.preventDefault();
     setLoading(true);
     try {
       if (isLoginState) {
-        await login(email, password);
+        await login(email, password, redirectTo);
       } else {
         await register(name, email, password);
       }
