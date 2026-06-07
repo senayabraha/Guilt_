@@ -16,6 +16,8 @@ const CartSidebar = () => {
     items,
     updateQuantity,
     removeFromCart,
+    clearCart,
+    cartCount,
     cartTotal,
     isCartOpen,
     setIsCartOpen,
@@ -44,12 +46,14 @@ const CartSidebar = () => {
             <ShoppingBagIcon className="size-5" />
             <h2 className="text-lg font-medium">Your Cart</h2>
             <span className="px-2 py-0.5 text-xs font-semibold bg-app-cream rounded-full">
-              {items.length} items
+              {cartCount} {cartCount === 1 ? "item" : "items"}
             </span>
           </div>
           <button
+            type="button"
             onClick={() => setIsCartOpen(false)}
             className="p-2 rounded-xl hover:bg-app-cream transition-colors"
+            aria-label="Close cart"
           >
             <XIcon className="size-5" />
           </button>
@@ -61,77 +65,113 @@ const CartSidebar = () => {
             <div className="flex flex-col items-center justify-center h-full text-center">
               <ShoppingBagIcon className="size-16 text-app-border mb-4" />
               <h3 className="text-lg font-medium mb-1">Your cart is empty</h3>
+              <p className="text-sm text-app-text-light mb-4">
+                Add groceries from a product card, then come back here when you are ready.
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsCartOpen(false)}
+                className="px-4 py-2 rounded-xl bg-app-green text-white text-sm font-semibold hover:bg-green-900 transition-colors"
+              >
+                Continue shopping
+              </button>
             </div>
           ) : (
-            items.map((item) => (
-              <div
-                key={item.product.id}
-                className="flex gap-3 bg-app-cream/60 rounded-xl p-3"
-              >
-                <img
-                  src={item.product.image}
-                  alt={item.product.name}
-                  className="size-16 rounded-lg object-cover shrink-0"
-                />
-                <div className="flex-1 min-w-0">
-                  <h4 className="text-sm font-semibold truncate">
-                    {item.product.name}
-                  </h4>
-                  <p className="text-xs text-app-text-light">
-                    {formatCurrency(item.product.price)} / {item.product.unit}
-                  </p>
-                  <div className="flex items-center justify-between mt-2">
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        onClick={() =>
-                          updateQuantity(item.product.id || item.product._id, item.quantity - 1)
-                        }
-                        className="size-7 rounded-lg bg-white border border-app-border flex-center"
-                      >
-                        <MinusIcon className="size-3" />
-                      </button>
+            items.map((item) => {
+              const productId = item.product.id || item.product._id;
 
-                      <span className="text-sm font-semibold w-6 text-center">
-                        {item.quantity}
-                      </span>
+              return (
+                <div
+                  key={productId}
+                  className="flex gap-3 bg-app-cream/60 rounded-xl p-3"
+                >
+                  <img
+                    src={item.product.image}
+                    alt={item.product.name}
+                    className="size-16 rounded-lg object-cover shrink-0"
+                  />
+                  <div className="flex-1 min-w-0">
+                    <h4 className="text-sm font-semibold truncate">
+                      {item.product.name}
+                    </h4>
+                    <p className="text-xs text-app-text-light">
+                      {formatCurrency(item.product.price)} / {item.product.unit}
+                    </p>
+                    <div className="flex items-center justify-between mt-2 gap-3">
+                      <div
+                        className="flex items-center rounded-lg bg-white border border-app-border overflow-hidden"
+                        aria-label={`Quantity for ${item.product.name}`}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(productId, item.quantity - 1)}
+                          className="size-8 flex-center hover:bg-app-cream transition-colors"
+                          aria-label={`Decrease ${item.product.name} quantity`}
+                        >
+                          <MinusIcon className="size-3" />
+                        </button>
 
-                      <button
-                        onClick={() =>
-                          updateQuantity(item.product.id || item.product._id, item.quantity + 1)
-                        }
-                        className="size-7 rounded-lg bg-white border border-app-border flex-center"
-                      >
-                        <PlusIcon className="size-3" />
-                      </button>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-sm font-semibold">
-                        {formatCurrency(item.product.price * item.quantity)}
-                      </span>
-                      <button
-                        onClick={() => removeFromCart(item.product.id || item.product._id)}
-                        className="p-1 text-app-text-light hover:text-app-error transition-colors"
-                      >
-                        <Trash2Icon className="size-4" />
-                      </button>
+                        <span className="text-sm font-semibold w-8 text-center">
+                          {item.quantity}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => updateQuantity(productId, item.quantity + 1)}
+                          className="size-8 flex-center hover:bg-app-cream transition-colors"
+                          aria-label={`Increase ${item.product.name} quantity`}
+                        >
+                          <PlusIcon className="size-3" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="text-sm font-semibold">
+                          {formatCurrency(item.product.price * item.quantity)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeFromCart(productId)}
+                          className="p-1.5 rounded-lg text-app-text-light hover:text-app-error hover:bg-red-50 transition-colors"
+                          aria-label={`Remove ${item.product.name} from cart`}
+                        >
+                          <Trash2Icon className="size-4" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
 
         {/* Footer */}
         {items.length > 0 && (
           <div className="p-5 border-t border-app-border space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <button
+                type="button"
+                onClick={() => setIsCartOpen(false)}
+                className="text-sm font-semibold text-app-green hover:text-green-900"
+              >
+                Continue shopping
+              </button>
+              <button
+                type="button"
+                onClick={clearCart}
+                className="text-sm font-semibold text-app-error hover:text-red-700"
+              >
+                Clear cart
+              </button>
+            </div>
+
             <div className="flex justify-between text-sm">
               <span className="text-app-text-light">Subtotal</span>
               <span className="font-medium">{formatCurrency(cartTotal)}</span>
             </div>
 
             <div className="flex justify-between text-sm">
-              <span className="text-app-text-light">Delivery</span>
+              <span className="text-app-text-light">Estimated delivery</span>
               <span className="font-medium">
                 {deliveryFee === 0 ? (
                   <span className="text-app-success">Free</span>
@@ -143,7 +183,8 @@ const CartSidebar = () => {
 
             {deliveryFee > 0 && (
               <p className="text-xs text-app-text-light text-center">
-                Free delivery on orders over {formatCurrency(20)}!
+                Free delivery on orders over {formatCurrency(20)}. Final fees are
+                confirmed at checkout.
               </p>
             )}
 
@@ -153,6 +194,7 @@ const CartSidebar = () => {
             </div>
 
             <button
+              type="button"
               onClick={() => {
                 setIsCartOpen(false);
                 navigate("/checkout");

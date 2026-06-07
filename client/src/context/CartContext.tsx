@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import {
   createContext,
   useContext,
@@ -25,6 +26,10 @@ const CartContext = createContext<CartContextType | undefined>(undefined);
 
 const getProductId = (product: Product) => product.id || product._id;
 const getProductStoreId = (product: Product) => product.storeId || product.store?.id || null;
+const getCartStoreId = (cartItems: CartItem[]) => {
+  const storeItem = cartItems.find((item) => getProductStoreId(item.product));
+  return storeItem ? getProductStoreId(storeItem.product) : null;
+};
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(() => {
@@ -40,17 +45,42 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const addToCart = (product: Product, quantity = 1) => {
     const incomingStoreId = getProductStoreId(product);
-
-    // Enforce one-store carts (compute from current items, not inside setState).
-    const currentStoreId = items.find((item) => getProductStoreId(item.product))
-      ? getProductStoreId(
-          items.find((item) => getProductStoreId(item.product))!.product,
-        )
-      : null;
+    const currentStoreId = getCartStoreId(items);
 
     if (currentStoreId && incomingStoreId && currentStoreId !== incomingStoreId) {
-      toast.error(
-        "Your cart already contains items from another store. Clear cart to shop from this store.",
+      const storeName = product.store?.name || "this store";
+
+      toast.custom(
+        (t) => (
+          <div className="max-w-sm rounded-2xl bg-white p-4 text-sm text-app-text shadow-xl border border-app-border">
+            <p className="font-semibold text-app-green">Start a new store order?</p>
+            <p className="mt-1 text-app-text-light">
+              Your cart already has items from another store. Clear it to start a
+              new order from {storeName}.
+            </p>
+            <div className="mt-3 flex gap-2">
+              <button
+                type="button"
+                onClick={() => toast.dismiss(t.id)}
+                className="flex-1 rounded-xl border border-app-border px-3 py-2 font-medium hover:bg-app-cream"
+              >
+                Keep cart
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setItems([{ product, quantity }]);
+                  toast.dismiss(t.id);
+                  toast.success(`Started a new cart from ${storeName}`);
+                }}
+                className="flex-1 rounded-xl bg-app-orange px-3 py-2 font-semibold text-white hover:bg-app-orange-dark"
+              >
+                Clear & add
+              </button>
+            </div>
+          </div>
+        ),
+        { duration: 6000 },
       );
       return;
     }
@@ -68,9 +98,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return [...prev, { product, quantity }];
     });
 
-    // Keep the customer on the current page; just confirm with a toast.
-    // The cart only opens when they tap the cart button in the navbar.
-    toast.success("Added to cart");
+    toast.success(`${product.name} added to cart`);
   };
 
   const removeFromCart = (productId: string) => {
@@ -99,9 +127,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     (sum, item) => sum + item.product.price * item.quantity,
     0,
   );
-  const cartStoreId = items.find((item) => getProductStoreId(item.product))
-    ? getProductStoreId(items.find((item) => getProductStoreId(item.product))!.product)
-    : null;
+  const cartStoreId = getCartStoreId(items);
 
   return (
     <CartContext.Provider

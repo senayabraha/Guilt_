@@ -15,7 +15,7 @@ import { getProfile } from "../lib/db/profiles";
 interface AuthContextType {
   user: User | null;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, redirectTo?: string) => Promise<void>;
   register: (
     name: string,
     email: string,
@@ -44,13 +44,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session?.user) {
-        loadProfile(data.session.user.id).finally(() => setLoading(false));
-      } else {
-        setLoading(false);
-      }
-    });
+    supabase.auth
+      .getSession()
+      .then(({ data }) => {
+        if (data.session?.user) {
+          return loadProfile(data.session.user.id);
+        }
+      })
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
 
     const {
       data: { subscription },
@@ -65,8 +67,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => subscription.unsubscribe();
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+  const login = async (
+    email: string,
+    password: string,
+    redirectTo: string = "/",
+  ) => {
+    const { data, error } = await supabase.auth.signInWithPassword({
       email: email.toLowerCase(),
       password,
     });
@@ -74,8 +80,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       toast.error(error.message);
       return;
     }
+    if (data.user) await loadProfile(data.user.id);
     toast.success("Login successful");
-    navigate("/");
+    navigate(redirectTo.startsWith("/") ? redirectTo : "/", { replace: true });
   };
 
   const register = async (
