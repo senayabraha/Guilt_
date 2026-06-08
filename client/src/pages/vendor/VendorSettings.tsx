@@ -1,11 +1,21 @@
 import { useEffect, useState } from "react";
-import { useParams, Navigate, Link } from "react-router-dom";
+import { useParams, Navigate, Link, useNavigate } from "react-router-dom";
+import {
+  ArrowLeftIcon,
+  StoreIcon,
+  PhoneIcon,
+  MapPinIcon,
+  ImageIcon,
+  TruckIcon,
+  TagIcon,
+} from "lucide-react";
 import toast from "react-hot-toast";
 
 import { categoriesData } from "../../assets/assets";
 import Loading from "../../components/Loading";
 import ImageCropUpload from "../../components/ImageCropUpload";
 import MapPinPicker from "../../components/MapPinPicker";
+import { ADDIS_AREAS } from "../../lib/areas";
 import { getMyStoreById, updateMyStore } from "../../lib/db/stores";
 
 const storeStatusColors: Record<string, string> = {
@@ -14,13 +24,41 @@ const storeStatusColors: Record<string, string> = {
   SUSPENDED: "bg-red-100 text-red-700",
 };
 
+const storeStatusLabels: Record<string, string> = {
+  PENDING: "Under Review",
+  APPROVED: "Approved",
+  SUSPENDED: "Suspended",
+};
+
+const SectionHeader = ({
+  icon: Icon,
+  title,
+  description,
+}: {
+  icon: React.ElementType;
+  title: string;
+  description?: string;
+}) => (
+  <div className="px-6 py-4 border-b border-app-border bg-app-cream/40">
+    <div className="flex items-center gap-2">
+      <Icon className="size-4 text-app-green" />
+      <h3 className="text-sm font-semibold text-zinc-800">{title}</h3>
+    </div>
+    {description && (
+      <p className="text-xs text-app-text-light mt-0.5 ml-6">{description}</p>
+    )}
+  </div>
+);
+
 export default function VendorSettings() {
   const { storeId } = useParams();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState("");
   const [notFound, setNotFound] = useState(false);
   const [categories, setCategories] = useState<string[]>([]);
+  const [useCustomArea, setUseCustomArea] = useState(false);
   const [form, setForm] = useState({
     name: "",
     description: "",
@@ -51,6 +89,9 @@ export default function VendorSettings() {
         }
         setStatus(s.status);
         setCategories(s.categories || []);
+        const stateValue = s.state || "";
+        const knownArea = ADDIS_AREAS.filter((a) => a !== "Addis Ababa").includes(stateValue as any);
+        setUseCustomArea(!!stateValue && !knownArea);
         setForm({
           name: s.name || "",
           description: s.description || "",
@@ -58,7 +99,7 @@ export default function VendorSettings() {
           email: s.email || "",
           address: s.address || "",
           city: s.city || "",
-          state: s.state || "",
+          state: stateValue,
           zip: s.zip || "",
           logo: s.logo || "",
           coverImage: s.coverImage || "",
@@ -70,7 +111,7 @@ export default function VendorSettings() {
           lng: s.lng ?? 0,
         });
       } catch (error: any) {
-        toast.error(error?.response?.data?.message || "No store found");
+        toast.error(error?.message || "No store found");
       } finally {
         setLoading(false);
       }
@@ -78,7 +119,7 @@ export default function VendorSettings() {
     fetchStore();
   }, [storeId]);
 
-  const update = (key: string, value: string | boolean) =>
+  const update = (key: string, value: string | boolean | number) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
   const toggleCategory = (slug: string) => {
@@ -106,143 +147,274 @@ export default function VendorSettings() {
   if (notFound) return <Navigate to="/vendor" replace />;
 
   const inputClass =
-    "w-full px-4 py-2.5 rounded-lg border border-zinc-200 focus:border-app-green focus:ring-1 focus:ring-app-green outline-none transition-all";
+    "w-full px-4 py-2.5 rounded-lg border border-zinc-200 focus:border-app-green focus:ring-1 focus:ring-app-green outline-none transition-all text-sm";
+
+  const isApproved = status === "APPROVED";
+  const areaOptions = ADDIS_AREAS.filter((a) => a !== "Addis Ababa");
 
   return (
     <div className="space-y-4">
       <Link
         to={`/vendor/stores/${storeId}`}
-        className="inline-flex items-center text-sm font-medium text-zinc-600 hover:text-app-green transition-colors"
+        className="inline-flex items-center gap-1.5 text-sm font-medium text-app-text-light hover:text-app-green transition-colors"
       >
-        ← Store dashboard
+        <ArrowLeftIcon className="size-4" /> Store dashboard
       </Link>
 
-      <div className="bg-white rounded-2xl shadow-sm border border-app-border overflow-hidden">
-      <div className="px-6 py-5 border-b border-app-border flex items-center justify-between gap-3 flex-wrap">
-        <h2 className="text-xl font-semibold text-zinc-900">Store Settings</h2>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div>
+          <h1 className="text-xl font-semibold text-zinc-900">Store Settings</h1>
+          <p className="text-xs text-app-text-light mt-0.5">
+            Changes take effect immediately after saving.
+          </p>
+        </div>
         {status && (
           <span
             className={`px-3 py-1.5 rounded-full text-xs font-semibold ${storeStatusColors[status] || "bg-zinc-100 text-zinc-600"}`}
           >
-            {status}
+            {storeStatusLabels[status] || status}
           </span>
         )}
       </div>
 
-      <form onSubmit={handleSubmit} className="p-6 space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Store Name
-            </label>
-            <input
-              required
-              type="text"
-              value={form.name}
-              onChange={(e) => update("name", e.target.value)}
-              className={inputClass}
-            />
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* ── Store Status ─────────────────────────────── */}
+        <div className="bg-white rounded-2xl border border-app-border overflow-hidden">
+          <SectionHeader
+            icon={StoreIcon}
+            title="Store Status"
+            description="Control whether your store is currently accepting orders"
+          />
+          <div className="p-6">
+            <div
+              className={`flex items-center justify-between gap-4 p-4 rounded-xl border ${
+                isApproved
+                  ? form.isOpen
+                    ? "border-app-green/30 bg-green-50"
+                    : "border-zinc-200 bg-zinc-50"
+                  : "border-amber-200 bg-amber-50"
+              }`}
+            >
+              <div>
+                <p className="text-sm font-semibold text-zinc-800">
+                  {isApproved
+                    ? form.isOpen
+                      ? "Store is Open"
+                      : "Store is Closed"
+                    : "Store not yet approved"}
+                </p>
+                <p className="text-xs text-app-text-light mt-0.5">
+                  {isApproved
+                    ? form.isOpen
+                      ? "Customers can browse products and place orders."
+                      : "Customers see your store but cannot place new orders."
+                    : "Your store must be approved before you can go live."}
+                </p>
+              </div>
+              <button
+                type="button"
+                disabled={!isApproved}
+                onClick={() => update("isOpen", !form.isOpen)}
+                role="switch"
+                aria-checked={form.isOpen}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-app-green/30 shrink-0 ${
+                  form.isOpen ? "bg-app-green" : "bg-zinc-300"
+                }`}
+              >
+                <span
+                  className={`inline-block size-5 bg-white rounded-full shadow-sm transition-transform ${
+                    form.isOpen ? "translate-x-5" : "translate-x-1"
+                  }`}
+                />
+              </button>
+            </div>
           </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Description
-            </label>
-            <textarea
-              rows={3}
-              value={form.description}
-              onChange={(e) => update("description", e.target.value)}
-              className={`${inputClass} resize-none`}
-            />
+        </div>
+
+        {/* ── Profile ──────────────────────────────────── */}
+        <div className="bg-white rounded-2xl border border-app-border overflow-hidden">
+          <SectionHeader
+            icon={StoreIcon}
+            title="Store Profile"
+            description="Your public-facing store name and description"
+          />
+          <div className="p-6 space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                Store Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                required
+                type="text"
+                value={form.name}
+                onChange={(e) => update("name", e.target.value)}
+                className={inputClass}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                Description
+              </label>
+              <textarea
+                rows={3}
+                value={form.description}
+                onChange={(e) => update("description", e.target.value)}
+                className={`${inputClass} resize-none`}
+                placeholder="Tell customers about your store…"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Phone
-            </label>
-            <input
-              type="text"
-              value={form.phone}
-              onChange={(e) => update("phone", e.target.value)}
-              className={inputClass}
-            />
+        </div>
+
+        {/* ── Contact ──────────────────────────────────── */}
+        <div className="bg-white rounded-2xl border border-app-border overflow-hidden">
+          <SectionHeader
+            icon={PhoneIcon}
+            title="Contact Information"
+          />
+          <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                Phone
+              </label>
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => update("phone", e.target.value)}
+                className={inputClass}
+                placeholder="+251…"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                Email
+              </label>
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => update("email", e.target.value)}
+                className={inputClass}
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Email
-            </label>
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => update("email", e.target.value)}
-              className={inputClass}
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Store pickup instructions
-            </label>
-            <input
-              type="text"
-              value={form.address}
-              onChange={(e) => update("address", e.target.value)}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
-              City
-            </label>
-            <input
-              type="text"
-              value={form.city}
-              onChange={(e) => update("city", e.target.value)}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
-              State
-            </label>
-            <input
-              type="text"
-              value={form.state}
-              onChange={(e) => update("state", e.target.value)}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Zip
-            </label>
-            <input
-              type="text"
-              value={form.zip}
-              onChange={(e) => update("zip", e.target.value)}
-              className={inputClass}
-            />
-          </div>
-          <div className="md:col-span-2">
+        </div>
+
+        {/* ── Location ─────────────────────────────────── */}
+        <div className="bg-white rounded-2xl border border-app-border overflow-hidden">
+          <SectionHeader
+            icon={MapPinIcon}
+            title="Location"
+            description="Helps customers and delivery partners find your store"
+          />
+          <div className="p-6 space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                  City
+                </label>
+                <input
+                  type="text"
+                  value={form.city}
+                  onChange={(e) => update("city", e.target.value)}
+                  className={inputClass}
+                  placeholder="e.g. Addis Ababa"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                  Sub-city / Area
+                </label>
+                {useCustomArea ? (
+                  <div className="flex gap-2">
+                    <input
+                      type="text"
+                      value={form.state}
+                      onChange={(e) => update("state", e.target.value)}
+                      className={inputClass}
+                      placeholder="Enter area name"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUseCustomArea(false);
+                        update("state", "");
+                      }}
+                      className="px-3 text-xs text-app-text-light hover:text-zinc-700 border border-zinc-200 rounded-lg shrink-0"
+                    >
+                      List
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <select
+                      value={form.state}
+                      onChange={(e) => update("state", e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">Select sub-city…</option>
+                      {areaOptions.map((a) => (
+                        <option key={a} value={a}>
+                          {a}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setUseCustomArea(true);
+                        update("state", "");
+                      }}
+                      className="px-3 text-xs text-app-text-light hover:text-zinc-700 border border-zinc-200 rounded-lg shrink-0"
+                    >
+                      Other
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                Street / Pickup Address
+              </label>
+              <input
+                type="text"
+                value={form.address}
+                onChange={(e) => update("address", e.target.value)}
+                className={inputClass}
+                placeholder="Building name, landmark, etc."
+              />
+            </div>
             <MapPinPicker
-              label="Store pickup location"
+              label="Store pickup pin"
               lat={form.lat}
               lng={form.lng}
               onChange={(c) =>
                 setForm((prev) => ({ ...prev, lat: c.lat, lng: c.lng }))
               }
-              helperText="Your store pin helps delivery partners find the pickup point."
+              helperText="Pin your exact pickup location to help delivery partners find you."
             />
           </div>
-          <ImageCropUpload
-            label="Store Logo"
-            value={form.logo}
-            aspect={1}
-            recommendedSize="Recommended: 512×512 square image"
-            previewClassName="aspect-square max-w-[220px]"
-            onChange={(url) => update("logo", url)}
-            onRemove={() => update("logo", "")}
+        </div>
+
+        {/* ── Branding ─────────────────────────────────── */}
+        <div className="bg-white rounded-2xl border border-app-border overflow-hidden">
+          <SectionHeader
+            icon={ImageIcon}
+            title="Branding"
+            description="Logo and cover image shown to customers"
           />
-          <div className="md:col-span-2">
+          <div className="p-6 space-y-6">
             <ImageCropUpload
-              label="Store Cover Image"
+              label="Store Logo"
+              value={form.logo}
+              aspect={1}
+              recommendedSize="Recommended: 512×512 square image"
+              previewClassName="aspect-square max-w-[220px]"
+              onChange={(url) => update("logo", url)}
+              onRemove={() => update("logo", "")}
+            />
+            <ImageCropUpload
+              label="Cover Image"
               value={form.coverImage}
               aspect={16 / 9}
               recommendedSize="Recommended: 1200×500 wide banner"
@@ -251,89 +423,108 @@ export default function VendorSettings() {
               onRemove={() => update("coverImage", "")}
             />
           </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Delivery Radius (km)
-            </label>
-            <input
-              type="number"
-              min="0"
-              value={form.deliveryRadius}
-              onChange={(e) => update("deliveryRadius", e.target.value)}
-              className={inputClass}
-            />
+        </div>
+
+        {/* ── Delivery ─────────────────────────────────── */}
+        <div className="bg-white rounded-2xl border border-app-border overflow-hidden">
+          <SectionHeader
+            icon={TruckIcon}
+            title="Delivery Settings"
+            description="Fees and radius used when customers checkout"
+          />
+          <div className="p-6 grid grid-cols-1 sm:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                Delivery Radius (km)
+              </label>
+              <input
+                type="number"
+                min="0"
+                value={form.deliveryRadius}
+                onChange={(e) => update("deliveryRadius", e.target.value)}
+                className={inputClass}
+                placeholder="0"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                Delivery Fee (ETB)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.deliveryFee}
+                onChange={(e) => update("deliveryFee", e.target.value)}
+                className={inputClass}
+                placeholder="0.00"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                Minimum Order (ETB)
+              </label>
+              <input
+                type="number"
+                step="0.01"
+                min="0"
+                value={form.minOrder}
+                onChange={(e) => update("minOrder", e.target.value)}
+                className={inputClass}
+                placeholder="0.00"
+              />
+            </div>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Delivery Fee (ETB)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={form.deliveryFee}
-              onChange={(e) => update("deliveryFee", e.target.value)}
-              className={inputClass}
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Minimum Order (ETB)
-            </label>
-            <input
-              type="number"
-              step="0.01"
-              min="0"
-              value={form.minOrder}
-              onChange={(e) => update("minOrder", e.target.value)}
-              className={inputClass}
-            />
-          </div>
-          <div className="md:col-span-2">
-            <label className="block text-sm font-medium text-zinc-700 mb-2">
-              Categories
-            </label>
+        </div>
+
+        {/* ── Categories ───────────────────────────────── */}
+        <div className="bg-white rounded-2xl border border-app-border overflow-hidden">
+          <SectionHeader
+            icon={TagIcon}
+            title="Categories"
+            description="Help customers discover your store"
+          />
+          <div className="p-6">
             <div className="flex flex-wrap gap-2">
               {categoriesData.map((c) => (
                 <button
                   key={c.slug}
                   type="button"
                   onClick={() => toggleCategory(c.slug)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${categories.includes(c.slug) ? "bg-app-green text-white border-app-green" : "bg-white text-zinc-600 border-app-border hover:bg-app-cream"}`}
+                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                    categories.includes(c.slug)
+                      ? "bg-app-green text-white border-app-green"
+                      : "bg-white text-zinc-600 border-app-border hover:bg-app-cream"
+                  }`}
                 >
                   {c.name}
                 </button>
               ))}
             </div>
           </div>
-          <div className="flex items-center gap-3">
-            <label
-              htmlFor="isOpen"
-              className="text-sm font-medium text-zinc-700 cursor-pointer"
-            >
-              Store Open (accepting orders)
-            </label>
-            <input
-              type="checkbox"
-              id="isOpen"
-              checked={form.isOpen}
-              onChange={(e) => update("isOpen", e.target.checked)}
-              className="size-5 text-app-green rounded border-zinc-300 focus:ring-app-green cursor-pointer"
-            />
-          </div>
         </div>
 
-        <div className="pt-6 border-t border-app-border flex justify-end">
+        {/* ── Actions ──────────────────────────────────── */}
+        <div className="flex items-center justify-end gap-3">
+          <button
+            type="button"
+            onClick={() => navigate(`/vendor/stores/${storeId}`)}
+            className="px-5 py-2.5 text-sm font-medium text-zinc-600 bg-white border border-zinc-200 rounded-lg hover:bg-zinc-50 transition-colors"
+          >
+            Cancel
+          </button>
           <button
             disabled={saving}
             type="submit"
-            className="px-6 py-2.5 bg-app-orange text-white font-medium rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50"
+            className="px-6 py-2.5 bg-app-orange text-white text-sm font-semibold rounded-lg hover:bg-orange-600 transition-colors disabled:opacity-50 flex items-center gap-2"
           >
-            {saving ? "Saving..." : "Save Settings"}
+            {saving && (
+              <span className="size-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+            )}
+            {saving ? "Saving…" : "Save Settings"}
           </button>
         </div>
       </form>
-      </div>
     </div>
   );
 }
