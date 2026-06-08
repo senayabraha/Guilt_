@@ -203,7 +203,7 @@ const VendorOrderDetailModal = ({
                         className="w-full h-full object-cover"
                       />
                     ) : (
-                      <div className="w-full h-full flex-center text-zinc-400">
+                      <div className="w-full h-full flex items-center justify-center text-zinc-400">
                         <PackageCheckIcon className="size-6" />
                       </div>
                     )}
