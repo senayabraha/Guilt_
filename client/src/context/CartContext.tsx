@@ -49,8 +49,44 @@ export function CartProvider({ children }: { children: ReactNode }) {
       : null;
 
     if (currentStoreId && incomingStoreId && currentStoreId !== incomingStoreId) {
-      toast.error(
-        "Your cart already contains items from another store. Clear cart to shop from this store.",
+      toast(
+        (t) => (
+          <div className="flex flex-col gap-2 text-sm">
+            <p className="font-medium">Item is from a different store</p>
+            <p className="text-white/80">
+              Your cart has items from another store. Clear it to start a new
+              order?
+            </p>
+            <div className="flex gap-2 mt-1">
+              <button
+                onClick={() => {
+                  setItems([{ product, quantity }]);
+                  toast.dismiss(t.id);
+                  toast.success("Cart cleared — item added!");
+                }}
+                className="flex-1 py-1.5 bg-app-orange text-white text-xs font-semibold rounded-lg hover:bg-app-orange-dark transition-colors"
+              >
+                Clear cart &amp; add
+              </button>
+              <button
+                onClick={() => toast.dismiss(t.id)}
+                className="flex-1 py-1.5 bg-white/20 text-white text-xs font-semibold rounded-lg hover:bg-white/30 transition-colors"
+              >
+                Keep current cart
+              </button>
+            </div>
+          </div>
+        ),
+        {
+          duration: 6000,
+          style: {
+            background: "#1B3022",
+            color: "#fff",
+            borderRadius: "12px",
+            fontSize: "14px",
+            maxWidth: "340px",
+          },
+        },
       );
       return;
     }

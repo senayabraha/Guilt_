@@ -162,6 +162,13 @@ const CartSidebar = () => {
             >
               Proceed to Checkout <ArrowRightIcon className="size-4" />
             </button>
+
+            <button
+              onClick={() => setIsCartOpen(false)}
+              className="w-full py-2.5 text-sm font-medium text-app-text-light hover:text-app-green transition-colors"
+            >
+              Continue Shopping
+            </button>
           </div>
         )}
       </div>
