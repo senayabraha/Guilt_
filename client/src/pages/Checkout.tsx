@@ -40,11 +40,15 @@ const Checkout = () => {
     lng: 0,
   });
 
-  const [paymentMethod, setPaymentMethod] = useState("card");
+  const [phone, setPhone] = useState("");
+  const [instructions, setInstructions] = useState("");
+  const [paymentMethod, setPaymentMethod] = useState("cash");
 
-  const deliveryFee = cartTotal > 20 ? 0 : 1.99;
-  const tax = cartTotal * 0.08;
-  const total = cartTotal + deliveryFee + tax;
+  // Derive delivery fee from the store attached to the first cart item.
+  // Falls back to 0 if store data is unavailable (RPC will use its own value).
+  const storeDeliveryFee = items[0]?.product?.store?.deliveryFee;
+  const deliveryFee = storeDeliveryFee ?? 0;
+  const total = cartTotal + deliveryFee;
 
   const steps: { key: string; label: string; icon: typeof MapPinIcon }[] = [
     { key: "address", label: "Address", icon: MapPinIcon },
@@ -55,24 +59,15 @@ const Checkout = () => {
   const handlePlaceOrder = async () => {
     setLoading(true);
     try {
-      // Temporary cash/test flow: validation, totals, order creation, and stock
-      // decrement happen server-side in the place_order RPC. No Stripe required.
-      // shipping_address is stored as JSON. Include the new Addis-focused keys
-      // (fullName/phone/area/instructions) plus legacy keys so existing order
-      // displays keep working.
       const shippingAddress = {
-        fullName: address.label,
-        phone: address.zip,
+        label: address.label,
+        phone,
         city: address.city,
         area: address.state,
-        instructions: address.address,
+        address: address.address,
+        instructions,
         lat: address.lat,
         lng: address.lng,
-        // legacy keys
-        label: address.label,
-        address: address.address,
-        state: address.state,
-        zip: address.zip,
       };
 
       const orderId = await placeOrder({
@@ -87,14 +82,13 @@ const Checkout = () => {
       toast.success("Order placed successfully!");
       navigate(`/orders/${orderId}`);
     } catch (error: any) {
-      toast.error(error?.message || "Failed to place order");
+      toast.error(error?.message || "Failed to place order. Please try again.");
     } finally {
       setLoading(false);
       scrollTo(0, 0);
     }
   };
 
-  // Populate address from the user's default saved address.
   useEffect(() => {
     getMyAddresses()
       .then((addresses) => {
@@ -108,7 +102,7 @@ const Checkout = () => {
 
   if (items.length === 0) {
     return (
-      <div className="min-h-screen bg-app-cream flex-center">
+      <div className="min-h-screen bg-app-cream flex items-center justify-center">
         <div className="text-center">
           <h2 className="text-xl font-semibold text-app-green mb-2">
             Your cart is empty
@@ -149,10 +143,10 @@ const Checkout = () => {
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${step === s.key ? "bg-app-green text-white" : "bg-white text-app-text-light"}`}
               >
                 <s.icon className="size-4" /> {s.label}
-                {i < steps.length - 1 && (
-                  <ChevronRightIcon className="size-4 text-app-text-light" />
-                )}
               </button>
+              {i < steps.length - 1 && (
+                <ChevronRightIcon className="size-4 text-app-text-light shrink-0" />
+              )}
             </div>
           ))}
         </div>
@@ -166,6 +160,10 @@ const Checkout = () => {
                 setAddress={setAddress}
                 setStep={setStep}
                 addresses={savedAddresses}
+                phone={phone}
+                setPhone={setPhone}
+                instructions={instructions}
+                setInstructions={setInstructions}
               />
             )}
 
@@ -180,6 +178,8 @@ const Checkout = () => {
             {step === "review" && (
               <CheckoutReview
                 address={address}
+                phone={phone}
+                instructions={instructions}
                 items={items}
                 handlePlaceOrder={handlePlaceOrder}
                 loading={loading}
@@ -197,11 +197,9 @@ const Checkout = () => {
             <div className="space-y-2 text-sm">
               <div className="flex justify-between">
                 <span className="text-app-text-light">
-                  Subtotal ({items.length} items)
+                  Subtotal ({items.length} {items.length === 1 ? "item" : "items"})
                 </span>
-                <span>
-                  {formatCurrency(cartTotal)}
-                </span>
+                <span>{formatCurrency(cartTotal)}</span>
               </div>
 
               <div className="flex justify-between">
@@ -210,23 +208,14 @@ const Checkout = () => {
                   {deliveryFee === 0 ? (
                     <span className="text-app-success">Free</span>
                   ) : (
-                    `${formatCurrency(deliveryFee)}`
+                    formatCurrency(deliveryFee)
                   )}
-                </span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-app-text-light">Tax</span>
-                <span>
-                  {formatCurrency(tax)}
                 </span>
               </div>
 
               <div className="flex justify-between pt-3 border-t border-app-border text-base font-semibold">
                 <span>Total</span>
-                <span className="text-app-green">
-                  {formatCurrency(total)}
-                </span>
+                <span className="text-app-green">{formatCurrency(total)}</span>
               </div>
             </div>
           </div>

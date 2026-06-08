@@ -1,4 +1,4 @@
-import { ChevronRightIcon, CreditCardIcon } from "lucide-react";
+import { BanknoteIcon, ChevronRightIcon, CreditCardIcon } from "lucide-react";
 import type { Dispatch, SetStateAction } from "react";
 
 interface CheckoutPaymentProps {
@@ -17,40 +17,36 @@ export default function CheckoutPayment({
       <h2 className="text-lg font-semibold text-app-green mb-5 flex items-center gap-2">
         <CreditCardIcon className="size-5" /> Payment Method
       </h2>
+
       <div className="space-y-3">
-        {[
-          {
-            value: "card",
-            label: "Credit / Debit Card",
-            desc: "Pay securely with your card",
-          },
-          {
-            value: "cash",
-            label: "Cash on Delivery",
-            desc: "Pay when you receive",
-          },
-        ].map((method) => (
-          <label
-            key={method.value}
-            className={`flex items-center gap-4 p-4 rounded-xl border cursor-pointer transition-all ${paymentMethod === method.value ? "border-app-green bg-app-cream" : "border-app-border hover:border-app-green-lighter"}`}
-          >
-            <input
-              type="radio"
-              name="payment"
-              value={method.value}
-              checked={paymentMethod === method.value}
-              onChange={(e) => setPaymentMethod(e.target.value)}
-              className="size-4 text-app-green"
-            />
+        {/* Cash on Delivery — the only supported method */}
+        <label className="flex items-center gap-4 p-4 rounded-xl border border-app-green bg-app-cream cursor-pointer">
+          <input
+            type="radio"
+            name="payment"
+            value="cash"
+            checked={paymentMethod === "cash"}
+            onChange={(e) => setPaymentMethod(e.target.value)}
+            className="size-4 text-app-green"
+          />
+          <div className="flex items-start gap-3">
+            <BanknoteIcon className="size-5 text-app-green shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-semibold text-app-green">
-                {method.label}
+                Cash on Delivery
               </p>
-              <p className="text-xs text-app-text-light">{method.desc}</p>
+              <p className="text-xs text-app-text-light">
+                Pay in cash when your order arrives — no card required.
+              </p>
             </div>
-          </label>
-        ))}
+          </div>
+        </label>
+
+        <p className="text-xs text-app-text-light px-1">
+          Online card payment will be available soon.
+        </p>
       </div>
+
       <button
         onClick={() => {
           setStep("review");
