@@ -25,10 +25,11 @@ function applySort(query: any, sort?: string) {
 }
 
 // Public, RLS-safe product browsing via the visible_products view.
+// store:stores(*) is joined so ProductCard can show the vendor name.
 export async function getPublicProducts(
   filters: ProductFilters = {},
 ): Promise<Product[]> {
-  let query = supabase.from("visible_products").select("*");
+  let query = supabase.from("visible_products").select("*, store:stores(*)");
 
   if (filters.storeId) query = query.eq("store_id", filters.storeId);
   if (filters.category && filters.category !== "all")
@@ -50,7 +51,7 @@ export async function getPublicProducts(
 export async function getFlashDeals(): Promise<Product[]> {
   const { data, error } = await supabase
     .from("visible_products")
-    .select("*")
+    .select("*, store:stores(*)")
     .order("original_price", { ascending: false })
     .limit(8);
   if (error) throw error;
