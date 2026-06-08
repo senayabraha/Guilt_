@@ -63,14 +63,14 @@ create table public.products (
   store_id uuid references public.stores(id) on delete cascade,
   name text not null,
   description text default '',
-  images text[] not null default '{}',
+  images jsonb not null default '[]'::jsonb,
   specifications text default '',
-  price numeric not null,
-  original_price numeric default 0,
+  price numeric not null check (price >= 0),
+  original_price numeric default 0 check (original_price >= 0),
   image text not null,
   category text not null,
   unit text default 'piece',
-  stock integer not null default 0,
+  stock integer not null default 0 check (stock >= 0),
   is_organic boolean not null default false,
   is_active boolean not null default true,
   rating numeric default 0,
@@ -121,6 +121,9 @@ create index products_public_idx on public.products(is_active, stock, category);
 create index orders_user_id_idx on public.orders(user_id);
 create index orders_store_id_idx on public.orders(store_id);
 create index orders_delivery_partner_id_idx on public.orders(delivery_partner_id);
+create index orders_status_idx on public.orders(status);
+create index orders_created_at_idx on public.orders(created_at desc);
+create index addresses_user_id_idx on public.addresses(user_id);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -151,10 +154,10 @@ begin
     new.id,
     coalesce(new.email, ''),
     coalesce(new.raw_user_meta_data->>'name', ''),
-    case
-      when new.raw_user_meta_data->>'role' = 'VENDOR' then 'VENDOR'::public.user_role
-      else 'CUSTOMER'::public.user_role
-    end
+    -- Always start as CUSTOMER; role is upgraded via becomeVendor() after store
+    -- application. Never trust raw_user_meta_data for role assignment — anyone
+    -- can pass {"role":"VENDOR"} in signUp() metadata.
+    'CUSTOMER'::public.user_role
   );
   return new;
 end;
@@ -280,6 +283,11 @@ for update
 using (owner_id = auth.uid() or public.is_admin())
 with check (owner_id = auth.uid() or public.is_admin());
 
+create policy "stores delete admin only"
+on public.stores
+for delete
+using (public.is_admin());
+
 -- PRODUCTS
 create policy "products public active approved or owner or admin"
 on public.products
@@ -319,6 +327,18 @@ with check (
   )
 );
 
+create policy "products delete own store or admin"
+on public.products
+for delete
+using (
+  public.is_admin()
+  or exists (
+    select 1 from public.stores s
+    where s.id = store_id
+    and s.owner_id = auth.uid()
+  )
+);
+
 create policy "products update own store or admin"
 on public.products
 for update
@@ -354,17 +374,15 @@ using (
   or public.is_assigned_partner(delivery_partner_id)
 );
 
-create policy "orders insert own"
-on public.orders
-for insert
-with check (user_id = auth.uid());
+-- No INSERT policy: orders are created exclusively via the place_order() RPC
+-- (SECURITY DEFINER), which validates stock, computes totals, and decrements
+-- inventory atomically. Allowing direct inserts would bypass all those checks.
 
 create policy "orders update relevant"
 on public.orders
 for update
 using (
-  user_id = auth.uid()
-  or public.is_admin()
+  public.is_admin()
   or exists (
     select 1 from public.stores s
     where s.id = store_id
@@ -373,8 +391,7 @@ using (
   or public.is_assigned_partner(delivery_partner_id)
 )
 with check (
-  user_id = auth.uid()
-  or public.is_admin()
+  public.is_admin()
   or exists (
     select 1 from public.stores s
     where s.id = store_id
@@ -485,6 +502,9 @@ $$;
 -- totals, creates the order for the current user, and decrements stock — all
 -- server-side (security definer) so stock updates aren't blocked by RLS.
 -- cart: jsonb array of { "product": uuid, "quantity": int }.
+-- No tax is applied (tax = 0); total = subtotal + delivery_fee.
+-- Stock is decremented atomically with a WHERE stock >= qty guard so concurrent
+-- orders cannot drive inventory negative.
 create or replace function public.place_order(cart jsonb, shipping jsonb)
 returns uuid
 language plpgsql
@@ -492,19 +512,19 @@ security definer
 set search_path = public
 as $$
 declare
-  uid uuid := auth.uid();
-  item jsonb;
-  prod public.products%rowtype;
-  store_rec public.stores%rowtype;
-  first_set boolean := false;
-  first_store uuid;
-  order_items jsonb := '[]'::jsonb;
-  subtotal numeric := 0;
+  uid          uuid    := auth.uid();
+  item         jsonb;
+  prod         public.products%rowtype;
+  store_rec    public.stores%rowtype;
+  first_set    boolean := false;
+  first_store  uuid;
+  order_items  jsonb   := '[]'::jsonb;
+  subtotal     numeric := 0;
   delivery_fee numeric := 0;
-  tax numeric := 0;
-  total numeric := 0;
+  total        numeric := 0;
   new_order_id uuid;
-  qty int;
+  qty          int;
+  rows_updated int;
 begin
   if uid is null then
     raise exception 'You must be signed in to place an order';
@@ -516,6 +536,10 @@ begin
   for item in select * from jsonb_array_elements(cart)
   loop
     qty := (item->>'quantity')::int;
+    if qty is null or qty <= 0 then
+      raise exception 'Invalid quantity for a cart item';
+    end if;
+
     select * into prod from public.products where id = (item->>'product')::uuid;
 
     if prod.id is null then
@@ -531,62 +555,77 @@ begin
     -- One-store cart (null store_id = platform product is its own group).
     if not first_set then
       first_store := prod.store_id;
-      first_set := true;
+      first_set   := true;
     elsif first_store is distinct from prod.store_id then
       raise exception 'Please checkout items from one store at a time.';
     end if;
 
     if prod.store_id is not null then
       select * into store_rec from public.stores where id = prod.store_id;
-      if store_rec.id is null or store_rec.status <> 'APPROVED' or store_rec.is_open = false then
+      if store_rec.id is null
+         or store_rec.status <> 'APPROVED'
+         or store_rec.is_open = false then
         raise exception '%''s store is not accepting orders right now', prod.name;
       end if;
     end if;
 
     order_items := order_items || jsonb_build_object(
-      'product', prod.id,
-      'storeId', prod.store_id,
-      'name', prod.name,
-      'image', prod.image,
-      'price', prod.price,
-      'quantity', qty,
-      'unit', prod.unit,
-      'prepStatus', 'pending',
-      'pickedQuantity', 0,
+      'product',           prod.id,
+      'storeId',           prod.store_id,
+      'name',              prod.name,
+      'image',             prod.image,
+      'price',             prod.price,
+      'quantity',          qty,
+      'unit',              prod.unit,
+      'prepStatus',        'pending',
+      'pickedQuantity',    0,
       'unavailableReason', '',
-      'preparedAt', null
+      'preparedAt',        null
     );
     subtotal := subtotal + prod.price * qty;
   end loop;
 
   if first_store is not null then
     select * into store_rec from public.stores where id = first_store;
-    delivery_fee := coalesce(store_rec.delivery_fee, 1.99);
+    delivery_fee := coalesce(store_rec.delivery_fee, 0);
   else
-    delivery_fee := case when subtotal > 20 then 0 else 1.99 end;
+    delivery_fee := 0;
   end if;
 
-  tax := round(subtotal * 0.08, 2);
-  total := round(subtotal + delivery_fee + tax, 2);
+  -- No tax; total = subtotal + delivery_fee only.
+  total := round(subtotal + delivery_fee, 2);
 
   insert into public.orders (
     user_id, store_id, items, shipping_address, payment_method,
     subtotal, delivery_fee, tax, total, is_paid, status, status_history
   ) values (
     uid, first_store, order_items, coalesce(shipping, '{}'::jsonb), 'cash',
-    subtotal, delivery_fee, tax, total, false, 'Placed',
+    subtotal, delivery_fee, 0, total, false, 'Placed',
     jsonb_build_array(jsonb_build_object(
-      'status', 'Placed', 'note', 'Order placed successfully', 'timestamp', now()
+      'status',    'Placed',
+      'note',      'Order placed successfully',
+      'timestamp', now()
     ))
   )
   returning id into new_order_id;
 
-  -- Decrement stock immediately (cash flow has no payment step).
+  -- Atomically decrement stock. WHERE stock >= qty prevents negative inventory
+  -- under concurrent checkouts; 0 rows affected means another order already
+  -- consumed the stock, so we roll back everything including the insert above.
   for item in select * from jsonb_array_elements(cart)
   loop
+    qty := (item->>'quantity')::int;
+
     update public.products
-    set stock = stock - (item->>'quantity')::int
-    where id = (item->>'product')::uuid;
+    set    stock = stock - qty
+    where  id    = (item->>'product')::uuid
+      and  stock >= qty;
+
+    get diagnostics rows_updated = row_count;
+    if rows_updated = 0 then
+      raise exception
+        'Stock changed during checkout. Please review your cart and try again.';
+    end if;
   end loop;
 
   return new_order_id;
