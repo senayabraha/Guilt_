@@ -12,23 +12,25 @@ import { useAuth } from "../../context/AuthContext";
 export default function VendorLayout() {
   const { user, loading } = useAuth();
 
-  // Orders & Settings are scoped to a selected store, so they live inside each
-  // store's dashboard rather than the global sidebar.
+  if (loading) return <></>;
+
+  // Logged-out users go to login.
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  // Customers who haven't applied yet go straight to the application form.
+  // After submitting, becomeVendor() promotes them to VENDOR so they pass here.
+  if (user.role === "CUSTOMER") {
+    return <Navigate to="/vendor/apply" replace />;
+  }
+
   const VendorLinkData = [
     { to: "/vendor", label: "My Stores", icon: StoreIcon },
     { to: "/vendor/products", label: "Products", icon: PackageSearchIcon },
     { to: "/vendor/products/new", label: "Add Product", icon: PlusIcon },
     { to: "/", label: "Exit", icon: LogOutIcon },
   ];
-
-  if (loading) {
-    return <></>;
-  }
-
-  // Any logged-in user can reach the vendor area (customers can apply to become a vendor).
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
 
   return (
     <div className="h-screen overflow-hidden">

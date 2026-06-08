@@ -1,17 +1,19 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { PlusIcon, EditIcon, CheckIcon } from "lucide-react";
+import { ClockIcon, PlusIcon, EditIcon, CheckIcon } from "lucide-react";
 import toast from "react-hot-toast";
 
 import type { Product } from "../../types";
 import Loading from "../../components/Loading";
 import { getMyVendorProducts } from "../../lib/db/vendorProducts";
+import { getMyStores } from "../../lib/db/stores";
 import { updateProduct } from "../../lib/db/products";
 import { formatCurrency } from "../../lib/format";
 
 export default function VendorProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [hasApprovedStore, setHasApprovedStore] = useState(true);
   const [stockEdits, setStockEdits] = useState<Record<string, string>>({});
   const [searchParams] = useSearchParams();
   const [filter, setFilter] = useState<string>(
@@ -20,7 +22,12 @@ export default function VendorProducts() {
 
   const fetchProducts = async () => {
     try {
-      setProducts(await getMyVendorProducts());
+      const [myProducts, myStores] = await Promise.all([
+        getMyVendorProducts(),
+        getMyStores(),
+      ]);
+      setProducts(myProducts);
+      setHasApprovedStore(myStores.some((s) => s.status === "APPROVED"));
     } catch (error: any) {
       toast.error(error?.message || "Failed to load products");
     } finally {
@@ -85,6 +92,19 @@ export default function VendorProducts() {
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-app-border overflow-hidden">
+      {/* Banner for vendors without an approved store */}
+      {!hasApprovedStore && (
+        <div className="flex items-start gap-3 px-6 py-4 bg-amber-50 border-b border-amber-200 text-amber-800 text-sm">
+          <ClockIcon className="size-4 shrink-0 mt-0.5" />
+          <p>
+            Your store is pending admin approval. Product management will be
+            available once your store is approved.{" "}
+            <Link to="/vendor" className="font-medium underline">
+              Check store status →
+            </Link>
+          </p>
+        </div>
+      )}
       <div className="px-6 py-5 border-b border-app-border flex items-center justify-between gap-4 flex-wrap">
         <h2 className="text-xl font-semibold text-zinc-900">Products</h2>
         <Link

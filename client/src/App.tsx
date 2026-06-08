@@ -88,7 +88,10 @@ const App = () => {
         </Route>
 
         {/* Vendor pages */}
-        <Route path="/vendor/apply" element={<VendorApply />} />
+        {/* /vendor/apply is protected — logged-out users are sent to /login */}
+        <Route element={<ProtectedRoute />}>
+          <Route path="/vendor/apply" element={<VendorApply />} />
+        </Route>
         <Route path="/vendor" element={<VendorLayout />}>
           {/* Landing: list of all stores the vendor owns */}
           <Route index element={<VendorStores />} />
