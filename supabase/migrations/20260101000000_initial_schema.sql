@@ -1,0 +1,13 @@
+-- =============================================================================
+-- Guilt_ marketplace — initial schema (applied manually via SQL editor)
+-- =============================================================================
+-- This migration is a historical marker only. The full schema was applied
+-- directly in the Supabase SQL editor from supabase/schema.sql before the
+-- migrations folder existed. Do NOT re-run this file against an existing
+-- database — it will fail on CREATE TYPE / CREATE TABLE statements that
+-- already exist.
+--
+-- For a fresh deployment, run supabase/schema.sql first, then apply
+-- subsequent migrations in version order.
+-- =============================================================================
+select 1; -- no-op; real work is in supabase/schema.sql
