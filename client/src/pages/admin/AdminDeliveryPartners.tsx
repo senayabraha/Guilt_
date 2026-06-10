@@ -37,7 +37,7 @@ export default function AdminDeliveryPartners() {
     fetchPartners();
   }, []);
 
-  const handleSubmit = async (e: React.SubmitEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setSaving(true);
     try {
@@ -105,7 +105,7 @@ export default function AdminDeliveryPartners() {
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-full bg-app-green flex-center">
+                  <div className="size-10 rounded-full bg-app-green flex items-center justify-center">
                     <span className="text-white font-semibold text-sm">
                       {p.name.charAt(0)}
                     </span>
@@ -151,7 +151,7 @@ export default function AdminDeliveryPartners() {
             className="fixed inset-0 bg-app-cream/80 backdrop-blur z-50"
             onClick={() => setShowForm(false)}
           />
-          <div className="fixed inset-0 z-50 flex-center p-4">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
             <form
               onSubmit={handleSubmit}
               className="bg-white rounded-2xl p-6 w-full max-w-lg animate-fade-in"

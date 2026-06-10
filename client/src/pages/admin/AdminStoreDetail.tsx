@@ -26,6 +26,7 @@ export default function AdminStoreDetail() {
   const { id } = useParams();
   const [store, setStore] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [confirmSuspend, setConfirmSuspend] = useState(false);
 
   const fetchStore = async () => {
     if (!id) return;
@@ -56,11 +57,10 @@ export default function AdminStoreDetail() {
 
   const handleSuspend = async () => {
     if (!id) return;
-    if (!window.confirm("Suspend this store? Its products will be hidden."))
-      return;
     try {
       await setStoreStatus(id, "SUSPENDED");
       toast.success("Store suspended");
+      setConfirmSuspend(false);
       fetchStore();
     } catch (error: any) {
       toast.error(error?.message || "Failed to suspend store");
@@ -85,7 +85,7 @@ export default function AdminStoreDetail() {
         </div>
 
         {/* Cover image */}
-        <div className="relative h-36 sm:h-44 rounded-xl overflow-hidden bg-app-cream mb-5 flex-center">
+        <div className="relative h-36 sm:h-44 rounded-xl overflow-hidden bg-app-cream mb-5 flex items-center justify-center">
           {store.coverImage ? (
             <img
               src={store.coverImage}
@@ -101,7 +101,7 @@ export default function AdminStoreDetail() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-5 items-start">
-          <div className="size-16 rounded-xl bg-app-cream overflow-hidden flex-center shrink-0">
+          <div className="size-16 rounded-xl bg-app-cream overflow-hidden flex items-center justify-center shrink-0">
             {store.logo ? (
               <img
                 src={store.logo}
@@ -169,7 +169,7 @@ export default function AdminStoreDetail() {
             </div>
           </div>
 
-          <div className="flex gap-2 shrink-0">
+          <div className="flex gap-2 shrink-0 items-start flex-wrap">
             {store.status !== "APPROVED" && (
               <button
                 onClick={handleApprove}
@@ -179,12 +179,30 @@ export default function AdminStoreDetail() {
               </button>
             )}
             {store.status !== "SUSPENDED" && (
-              <button
-                onClick={handleSuspend}
-                className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
-              >
-                <BanIcon className="size-4" /> Suspend
-              </button>
+              confirmSuspend ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-red-600 font-medium">Suspend?</span>
+                  <button
+                    onClick={handleSuspend}
+                    className="px-3 py-1.5 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                  >
+                    Yes
+                  </button>
+                  <button
+                    onClick={() => setConfirmSuspend(false)}
+                    className="px-3 py-1.5 text-xs font-medium text-zinc-600 bg-zinc-100 rounded-lg hover:bg-zinc-200 transition-colors"
+                  >
+                    No
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmSuspend(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 text-sm font-medium text-red-600 bg-red-50 rounded-lg hover:bg-red-100 transition-colors"
+                >
+                  <BanIcon className="size-4" /> Suspend
+                </button>
+              )
             )}
           </div>
         </div>
@@ -197,9 +215,21 @@ export default function AdminStoreDetail() {
             Owner
           </p>
           <p className="font-medium text-zinc-900">{store.owner?.name}</p>
-          <p className="text-sm text-zinc-500">{store.owner?.email}</p>
+          {store.owner?.email && (
+            <a
+              href={`mailto:${store.owner.email}`}
+              className="text-sm text-app-green hover:underline"
+            >
+              {store.owner.email}
+            </a>
+          )}
           {store.owner?.phone && (
-            <p className="text-sm text-zinc-500">{store.owner.phone}</p>
+            <a
+              href={`tel:${store.owner.phone}`}
+              className="text-sm text-zinc-500 hover:text-app-green transition-colors block"
+            >
+              {store.owner.phone}
+            </a>
           )}
         </div>
         <div className="bg-white rounded-2xl border border-app-border p-5">

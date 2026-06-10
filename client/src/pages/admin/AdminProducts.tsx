@@ -1,16 +1,25 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { PlusIcon, EditIcon, XIcon } from "lucide-react";
+import { PlusIcon, EditIcon, XIcon, SearchIcon } from "lucide-react";
+import toast from "react-hot-toast";
 
 import type { Product } from "../../types";
 import Loading from "../../components/Loading";
 import { getAllProducts, deactivateProduct } from "../../lib/db/products";
 import { formatCurrency } from "../../lib/format";
-import toast from "react-hot-toast";
+
+const STOCK_FILTERS = [
+  { value: "all", label: "All" },
+  { value: "active", label: "In Stock" },
+  { value: "inactive", label: "Out of Stock" },
+];
 
 export default function AdminProducts() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [stockFilter, setStockFilter] = useState("all");
+  const [confirmDeactivate, setConfirmDeactivate] = useState<string | null>(null);
 
   const fetchProducts = async () => {
     try {
@@ -26,60 +35,118 @@ export default function AdminProducts() {
     fetchProducts();
   }, []);
 
-  const handleMarkOutOfStock = async (id: string, name: string) => {
-    if (
-      !window.confirm(
-        `Are you sure you want to mark "${name}" as out of stock?`,
-      )
-    )
-      return;
+  const filtered = useMemo(() => {
+    let list = products;
+    if (stockFilter === "active")
+      list = list.filter((p) => p.stock > 0 && p.isActive);
+    else if (stockFilter === "inactive")
+      list = list.filter((p) => !p.isActive || p.stock === 0);
+    if (search.trim()) {
+      const q = search.toLowerCase();
+      list = list.filter(
+        (p) =>
+          p.name.toLowerCase().includes(q) ||
+          (p.category || "").toLowerCase().includes(q),
+      );
+    }
+    return list;
+  }, [products, stockFilter, search]);
+
+  const handleDeactivate = async (id: string) => {
     try {
       await deactivateProduct(id);
       toast.success("Product marked as out of stock");
-      fetchProducts();
+      setProducts((prev) =>
+        prev.map((p) =>
+          (p.id === id || p._id === id) ? { ...p, isActive: false, stock: 0 } : p,
+        ),
+      );
     } catch (error: any) {
       toast.error(error?.message || "Failed to update product");
+    } finally {
+      setConfirmDeactivate(null);
     }
   };
 
   if (loading) return <Loading />;
 
   return (
-    <>
-      <div className="bg-white rounded-2xl shadow-sm border border-app-border overflow-hidden">
-        <div className="px-6 py-5 border-b border-app-border flex items-center justify-between gap-4 flex-wrap">
-          <h2 className="text-xl font-semibold text-zinc-900">Products</h2>
-          <Link
-            to="/admin/products/new"
-            className="flex items-center gap-2 px-4 py-2 bg-app-green text-white rounded-xl hover:bg-green-950 transition-colors font-medium text-sm"
-          >
-            <PlusIcon className="size-4" /> Add Product
-          </Link>
+    <div className="space-y-4">
+      {/* Header + search */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <h1 className="text-xl font-semibold text-zinc-900 flex-1">Products</h1>
+        <div className="relative">
+          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-400" />
+          <input
+            type="text"
+            placeholder="Search name or category…"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9 pr-4 py-2 text-sm rounded-xl border border-app-border focus:border-app-green outline-none w-52"
+          />
         </div>
+        <Link
+          to="/admin/products/new"
+          className="flex items-center gap-2 px-4 py-2 bg-app-green text-white rounded-xl hover:bg-green-950 transition-colors font-medium text-sm shrink-0"
+        >
+          <PlusIcon className="size-4" /> Add Product
+        </Link>
+      </div>
+
+      {/* Stock filter tabs */}
+      <div className="flex gap-1.5">
+        {STOCK_FILTERS.map((f) => (
+          <button
+            key={f.value}
+            onClick={() => setStockFilter(f.value)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
+              stockFilter === f.value
+                ? "bg-app-green text-white"
+                : "bg-white border border-app-border text-zinc-500 hover:bg-zinc-50"
+            }`}
+          >
+            {f.label}
+            {f.value !== "all" && (
+              <span className="ml-1 opacity-70">
+                (
+                {f.value === "active"
+                  ? products.filter((p) => p.stock > 0 && p.isActive).length
+                  : products.filter((p) => !p.isActive || p.stock === 0).length}
+                )
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-sm border border-app-border overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-sm whitespace-nowrap">
             <thead className="bg-app-cream/50 text-zinc-500 uppercase text-xs font-semibold">
               <tr>
                 <th className="px-6 py-4">Product</th>
+                <th className="px-6 py-4 hidden sm:table-cell">Store</th>
                 <th className="px-6 py-4">Price</th>
                 <th className="px-6 py-4">Stock</th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-app-border">
-              {products.length === 0 ? (
+              {filtered.length === 0 ? (
                 <tr>
                   <td
-                    colSpan={4}
-                    className="px-6 py-8 text-center text-zinc-500"
+                    colSpan={5}
+                    className="px-6 py-10 text-center text-zinc-500"
                   >
-                    No products found.
+                    {search
+                      ? "No products match your search."
+                      : "No products found."}
                   </td>
                 </tr>
               ) : (
-                products.map((product) => (
+                filtered.map((product) => (
                   <tr
-                    key={product.id}
+                    key={product.id || product._id}
                     className="hover:bg-zinc-50/50 transition-colors"
                   >
                     <td className="px-6 py-4">
@@ -87,7 +154,7 @@ export default function AdminProducts() {
                         <img
                           src={product.image}
                           alt={product.name}
-                          className="size-12 rounded-lg object-cover"
+                          className="size-10 rounded-lg object-cover shrink-0"
                         />
                         <div>
                           <p className="font-semibold text-zinc-900">
@@ -99,36 +166,69 @@ export default function AdminProducts() {
                         </div>
                       </div>
                     </td>
+                    <td className="px-6 py-4 text-zinc-600 hidden sm:table-cell">
+                      {(product as any).store?.name ?? (
+                        <span className="text-zinc-400 italic">Platform</span>
+                      )}
+                    </td>
                     <td className="px-6 py-4 font-medium">
                       {formatCurrency(product.price)}
                     </td>
                     <td className="px-6 py-4">
                       <span
-                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${product.stock > 0 ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                        className={`px-2.5 py-1 rounded-full text-xs font-semibold ${
+                          product.stock > 0 && product.isActive
+                            ? "bg-green-100 text-green-700"
+                            : "bg-red-100 text-red-700"
+                        }`}
                       >
-                        {product.stock > 0
+                        {product.stock > 0 && product.isActive
                           ? `${product.stock} in stock`
                           : "Out of stock"}
                       </span>
                     </td>
                     <td className="px-6 py-4 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Link
-                          to={`/admin/products/${product.id}/edit`}
-                          className="p-2 text-zinc-500 hover:text-app-orange bg-zinc-100 hover:bg-orange-50 rounded-lg transition-colors"
-                        >
-                          <EditIcon className="size-4" />
-                        </Link>
-                        <button
-                          onClick={() =>
-                            handleMarkOutOfStock(product.id || product._id, product.name)
-                          }
-                          title="Mark Out of Stock"
-                          className="p-2 text-zinc-500 hover:text-red-600 bg-zinc-100 hover:bg-red-50 rounded-lg transition-colors"
-                        >
-                          <XIcon className="size-4" />
-                        </button>
-                      </div>
+                      {confirmDeactivate === (product.id || product._id) ? (
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-xs text-red-600 font-medium">
+                            Deactivate?
+                          </span>
+                          <button
+                            onClick={() =>
+                              handleDeactivate(product.id || product._id)
+                            }
+                            className="px-2.5 py-1 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                          >
+                            Yes
+                          </button>
+                          <button
+                            onClick={() => setConfirmDeactivate(null)}
+                            className="px-2.5 py-1 text-xs font-medium text-zinc-600 bg-zinc-100 rounded-lg hover:bg-zinc-200 transition-colors"
+                          >
+                            No
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-end gap-2">
+                          <Link
+                            to={`/admin/products/${product.id}/edit`}
+                            className="p-2 text-zinc-500 hover:text-app-orange bg-zinc-100 hover:bg-orange-50 rounded-lg transition-colors"
+                          >
+                            <EditIcon className="size-4" />
+                          </Link>
+                          {(product.isActive || product.stock > 0) && (
+                            <button
+                              onClick={() =>
+                                setConfirmDeactivate(product.id || product._id)
+                              }
+                              title="Mark Out of Stock"
+                              className="p-2 text-zinc-500 hover:text-red-600 bg-zinc-100 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <XIcon className="size-4" />
+                            </button>
+                          )}
+                        </div>
+                      )}
                     </td>
                   </tr>
                 ))
@@ -137,6 +237,6 @@ export default function AdminProducts() {
           </table>
         </div>
       </div>
-    </>
+    </div>
   );
 }
