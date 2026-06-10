@@ -105,6 +105,7 @@ export default function CheckoutReview({
       </div>
 
       <button
+        type="button"
         onClick={handlePlaceOrder}
         disabled={loading}
         className="w-full py-3.5 bg-app-orange text-white font-semibold rounded-xl hover:bg-app-orange-dark transition-colors disabled:opacity-60 active:scale-[0.98]"

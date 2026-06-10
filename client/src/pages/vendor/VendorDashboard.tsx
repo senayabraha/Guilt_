@@ -221,6 +221,7 @@ export default function VendorDashboard() {
               disabled={toggling || store.status !== "APPROVED"}
               role="switch"
               aria-checked={isOpen}
+              aria-label={isOpen ? "Close store to new orders" : "Open store for new orders"}
               title={
                 store.status !== "APPROVED"
                   ? "Store must be approved to go live"

@@ -41,6 +41,7 @@ const FilterPanel = ({
         <div className="space-y-0.5">
           {SORT_OPTIONS.map((opt) => (
             <button
+              type="button"
               key={opt.value}
               onClick={() => updateFilter("sort", opt.value)}
               className={`block w-full text-left px-3 py-2 text-sm rounded-lg transition-all ${
@@ -61,6 +62,7 @@ const FilterPanel = ({
         <div className="space-y-0.5">
           {categoriesWithAll.map((cat) => (
             <button
+              type="button"
               key={cat.slug}
               onClick={() => updateFilter("category", cat.slug)}
               className={`block w-full text-left px-3 py-2 text-sm rounded-lg transition-all ${
@@ -81,7 +83,11 @@ const FilterPanel = ({
           Price Range (ETB)
         </h3>
         <div className="flex items-center gap-2">
+          <label htmlFor="filter-min-price" className="sr-only">
+            Minimum price
+          </label>
           <input
+            id="filter-min-price"
             type="number"
             placeholder="Min"
             value={minPrice}
@@ -90,7 +96,11 @@ const FilterPanel = ({
             className="w-full px-3 py-2 text-sm bg-white rounded-lg border border-app-border focus:border-app-green outline-none"
           />
           <span className="text-app-text-light text-sm shrink-0">—</span>
+          <label htmlFor="filter-max-price" className="sr-only">
+            Maximum price
+          </label>
           <input
+            id="filter-max-price"
             type="number"
             placeholder="Max"
             value={maxPrice}
@@ -111,6 +121,7 @@ const FilterPanel = ({
             type="button"
             role="switch"
             aria-checked={!!organic}
+            aria-label="Show organic products only"
             onClick={() => updateFilter("organic", organic ? "" : "1")}
             className={`w-10 h-5 rounded-full flex items-center transition-colors px-0.5 shrink-0 ${
               organic ? "bg-app-green" : "bg-zinc-200"
@@ -131,6 +142,7 @@ const FilterPanel = ({
 
       {hasFilters && (
         <button
+          type="button"
           onClick={clearFilters}
           className="w-full py-2 text-sm text-app-error hover:bg-red-50 rounded-lg transition-colors font-medium border border-red-100"
         >

@@ -48,11 +48,12 @@ export default function CheckoutPayment({
       </div>
 
       <button
+        type="button"
         onClick={() => {
           setStep("review");
           scrollTo(0, 0);
         }}
-        className="mt-6 px-6 py-3 bg-app-green text-white font-semibold rounded-xl hover:bg-app-green-light transition-colors flex items-center gap-2"
+        className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-app-green px-6 py-3 font-semibold text-white transition-colors hover:bg-app-green-light sm:w-auto"
       >
         Review Order <ChevronRightIcon className="size-4" />
       </button>

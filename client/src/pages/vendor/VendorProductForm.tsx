@@ -193,6 +193,7 @@ export default function VendorProductForm() {
         <Link
           to="/vendor/products"
           className="p-2 bg-zinc-100 hover:bg-zinc-200 text-zinc-500 rounded-lg transition-colors shrink-0"
+          aria-label="Back to vendor products"
         >
           <ArrowLeftIcon className="size-5" />
         </Link>
@@ -304,10 +305,11 @@ export default function VendorProductForm() {
             <h3 className={sectionTitle}>Basic Info</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="md:col-span-2">
-                <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                <label htmlFor="vendor-product-name" className="block text-sm font-medium text-zinc-700 mb-1.5">
                   Product Name <span className="text-app-error">*</span>
                 </label>
                 <input
+                  id="vendor-product-name"
                   required
                   type="text"
                   value={formData.name}
@@ -317,10 +319,11 @@ export default function VendorProductForm() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                <label htmlFor="vendor-product-category" className="block text-sm font-medium text-zinc-700 mb-1.5">
                   Category <span className="text-app-error">*</span>
                 </label>
                 <select
+                  id="vendor-product-category"
                   required
                   value={formData.category}
                   onChange={(e) => set("category", e.target.value)}
@@ -335,10 +338,11 @@ export default function VendorProductForm() {
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                <label htmlFor="vendor-product-unit" className="block text-sm font-medium text-zinc-700 mb-1.5">
                   Unit <span className="text-app-error">*</span>
                 </label>
                 <input
+                  id="vendor-product-unit"
                   required
                   type="text"
                   list="unit-suggestions"
@@ -361,10 +365,11 @@ export default function VendorProductForm() {
             <h3 className={sectionTitle}>Pricing</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                <label htmlFor="vendor-product-price" className="block text-sm font-medium text-zinc-700 mb-1.5">
                   Selling Price (ETB) <span className="text-app-error">*</span>
                 </label>
                 <input
+                  id="vendor-product-price"
                   required
                   type="number"
                   step="0.01"
@@ -375,13 +380,14 @@ export default function VendorProductForm() {
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                <label htmlFor="vendor-product-original-price" className="block text-sm font-medium text-zinc-700 mb-1.5">
                   Original Price (ETB)
                   <span className="text-zinc-400 font-normal ml-1 text-xs">
                     optional — shown crossed-out
                   </span>
                 </label>
                 <input
+                  id="vendor-product-original-price"
                   type="number"
                   step="0.01"
                   min="0"
@@ -418,10 +424,11 @@ export default function VendorProductForm() {
             <h3 className={sectionTitle}>Inventory</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+                <label htmlFor="vendor-product-stock" className="block text-sm font-medium text-zinc-700 mb-1.5">
                   Stock Quantity <span className="text-app-error">*</span>
                 </label>
                 <input
+                  id="vendor-product-stock"
                   required
                   type="number"
                   min="0"
@@ -443,6 +450,7 @@ export default function VendorProductForm() {
                     type="button"
                     role="switch"
                     aria-checked={formData.isOrganic}
+                    aria-label="Mark product as organic"
                     onClick={() => set("isOrganic", !formData.isOrganic)}
                     className={`w-10 h-5 rounded-full flex items-center transition-colors px-0.5 shrink-0 ${
                       formData.isOrganic ? "bg-green-600" : "bg-zinc-200"
@@ -469,10 +477,11 @@ export default function VendorProductForm() {
           <section className="p-6 space-y-4">
             <h3 className={sectionTitle}>Description & Specifications</h3>
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+              <label htmlFor="vendor-product-description" className="block text-sm font-medium text-zinc-700 mb-1.5">
                 Description
               </label>
               <textarea
+                id="vendor-product-description"
                 rows={4}
                 placeholder="Describe your product — what it is, where it's from, how to use it…"
                 value={formData.description}
@@ -485,13 +494,14 @@ export default function VendorProductForm() {
               </p>
             </div>
             <div>
-              <label className="block text-sm font-medium text-zinc-700 mb-1.5">
+              <label htmlFor="vendor-product-specifications" className="block text-sm font-medium text-zinc-700 mb-1.5">
                 Specifications
                 <span className="text-zinc-400 font-normal ml-1 text-xs">
                   optional
                 </span>
               </label>
               <textarea
+                id="vendor-product-specifications"
                 rows={3}
                 placeholder="e.g. Weight: 1 kg · Origin: Oromia · Storage: keep refrigerated below 4 °C"
                 value={formData.specifications}
@@ -513,6 +523,7 @@ export default function VendorProductForm() {
                 type="button"
                 role="switch"
                 aria-checked={formData.isActive}
+                aria-label="Toggle product visibility"
                 onClick={() => set("isActive", !formData.isActive)}
                 className={`mt-0.5 w-10 h-5 rounded-full flex items-center transition-colors px-0.5 shrink-0 ${
                   formData.isActive ? "bg-app-green" : "bg-zinc-200"

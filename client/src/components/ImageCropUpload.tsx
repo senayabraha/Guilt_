@@ -203,14 +203,20 @@ const ImageCropUpload = ({
       {/* Crop modal */}
       {imageSrc && (
         <div className="fixed inset-0 z-[100] bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4">
-          <div className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col max-h-[92vh]">
+          <div
+            className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col max-h-[92vh]"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="crop-upload-title"
+          >
             <div className="px-5 py-4 border-b border-app-border flex items-center justify-between">
-              <h3 className="font-semibold text-zinc-900">Crop {label}</h3>
+              <h3 id="crop-upload-title" className="font-semibold text-zinc-900">Crop {label}</h3>
               <button
                 type="button"
                 onClick={closeModal}
                 disabled={uploading}
                 className="p-1.5 rounded-lg hover:bg-app-cream transition-colors disabled:opacity-50"
+                aria-label={`Close ${label} crop dialog`}
               >
                 <XIcon className="size-5" />
               </button>
@@ -230,10 +236,11 @@ const ImageCropUpload = ({
 
             <div className="px-5 py-4 space-y-4">
               <div className="flex items-center gap-3">
-                <span className="text-xs font-medium text-zinc-600 shrink-0">
+                <label htmlFor="crop-upload-zoom" className="text-xs font-medium text-zinc-600 shrink-0">
                   Zoom
-                </span>
+                </label>
                 <input
+                  id="crop-upload-zoom"
                   type="range"
                   min={1}
                   max={3}

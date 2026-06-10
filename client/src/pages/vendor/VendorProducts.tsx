@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { ClockIcon, PlusIcon, EditIcon, CheckIcon } from "lucide-react";
+import { ClockIcon, PlusIcon, EditIcon, CheckIcon, PackageIcon } from "lucide-react";
 import toast from "react-hot-toast";
 
 import type { Product } from "../../types";
 import Loading from "../../components/Loading";
+import StatusState from "../../components/StatusState";
 import { getMyVendorProducts } from "../../lib/db/vendorProducts";
 import { getMyStores } from "../../lib/db/stores";
 import { updateProduct } from "../../lib/db/products";
@@ -117,6 +118,7 @@ export default function VendorProducts() {
       {stores.length > 0 && (
         <div className="px-6 py-4 border-b border-app-border flex gap-2 flex-wrap overflow-x-auto">
           <button
+            type="button"
             onClick={() => setFilter("all")}
             className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${filter === "all" ? "bg-app-green text-white border-app-green" : "bg-white text-zinc-600 border-app-border hover:bg-app-cream"}`}
           >
@@ -124,6 +126,7 @@ export default function VendorProducts() {
           </button>
           {stores.map((s) => (
             <button
+              type="button"
               key={s.id}
               onClick={() => setFilter(s.id)}
               className={`px-3.5 py-1.5 rounded-full text-xs font-medium border transition-colors ${filter === s.id ? "bg-app-green text-white border-app-green" : "bg-white text-zinc-600 border-app-border hover:bg-app-cream"}`}
@@ -148,8 +151,24 @@ export default function VendorProducts() {
           <tbody className="divide-y divide-app-border">
             {visibleProducts.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-8 text-center text-zinc-500">
-                  No products yet. Add your first product.
+                <td colSpan={6} className="px-6 py-8">
+                  <StatusState
+                    icon={PackageIcon}
+                    title={filter === "all" ? "No products yet" : "No products for this store"}
+                    description="Add your first product with images, pricing, stock, and visibility settings."
+                    className="border-dashed"
+                    action={
+                      hasApprovedStore ? (
+                        <Link
+                          to="/vendor/products/new"
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-app-green px-5 py-2.5 text-sm font-semibold text-white hover:bg-app-green-light"
+                        >
+                          <PlusIcon className="size-4" />
+                          Add Product
+                        </Link>
+                      ) : null
+                    }
+                  />
                 </td>
               </tr>
             ) : (
@@ -200,8 +219,10 @@ export default function VendorProducts() {
                         {stockEdits[pid] !== undefined &&
                           stockEdits[pid] !== String(product.stock ?? 0) && (
                             <button
+                              type="button"
                               onClick={() => saveStock(product)}
                               title="Save stock"
+                              aria-label={`Save stock for ${product.name}`}
                               className="p-1.5 bg-green-50 text-green-600 rounded-lg hover:bg-green-100 transition-colors"
                             >
                               <CheckIcon className="size-3.5" />
@@ -211,6 +232,7 @@ export default function VendorProducts() {
                     </td>
                     <td className="px-6 py-4">
                       <button
+                        type="button"
                         onClick={() => toggleActive(product)}
                         className={`px-2.5 py-1 rounded-full text-xs font-semibold transition-colors ${product.isActive ? "bg-green-100 text-green-700 hover:bg-green-200" : "bg-zinc-100 text-zinc-600 hover:bg-zinc-200"}`}
                       >
@@ -221,6 +243,7 @@ export default function VendorProducts() {
                       <Link
                         to={`/vendor/products/${pid}/edit`}
                         className="inline-flex p-2 text-zinc-500 hover:text-app-orange bg-zinc-100 hover:bg-orange-50 rounded-lg transition-colors"
+                        aria-label={`Edit ${product.name}`}
                       >
                         <EditIcon className="size-4" />
                       </Link>

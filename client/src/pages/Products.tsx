@@ -8,6 +8,7 @@ import { categoriesData } from "../assets/assets";
 import ProductCard from "../components/ProductCard";
 import Loading from "../components/Loading";
 import FilterPanel from "../components/FilterPanel";
+import StatusState from "../components/StatusState";
 import { getPublicProducts } from "../lib/db/products";
 
 const SORT_LABELS: Record<string, string> = {
@@ -120,6 +121,7 @@ const Products = () => {
 
               {/* Mobile filter button */}
               <button
+                type="button"
                 onClick={() => setMobileFiltersOpen(true)}
                 className="lg:hidden flex items-center gap-2 px-3 py-2 text-sm bg-white rounded-xl border border-app-border hover:bg-app-cream transition-colors"
               >
@@ -138,6 +140,7 @@ const Products = () => {
               <div className="flex flex-wrap gap-2 mb-5">
                 {activePills.map((pill) => (
                   <button
+                    type="button"
                     key={pill.key}
                     onClick={() => updateFilter(pill.key, "")}
                     className="flex items-center gap-1.5 px-3 py-1.5 bg-app-green text-white text-xs font-medium rounded-full hover:bg-app-green-light transition-colors"
@@ -148,6 +151,7 @@ const Products = () => {
                 ))}
                 {activePills.length > 1 && (
                   <button
+                    type="button"
                     onClick={clearFilters}
                     className="px-3 py-1.5 text-xs font-medium text-app-text-light bg-white border border-app-border rounded-full hover:bg-app-cream transition-colors"
                   >
@@ -161,25 +165,26 @@ const Products = () => {
             {loading ? (
               <Loading />
             ) : products.length === 0 ? (
-              <div className="text-center py-16">
-                <SlidersHorizontal className="size-12 text-app-border mx-auto mb-4" />
-                <p className="text-lg font-semibold text-app-green mb-1">
-                  No products found
-                </p>
-                <p className="text-sm text-app-text-light mb-5">
-                  {hasFilters
+              <StatusState
+                icon={SlidersHorizontal}
+                title="No products found"
+                description={
+                  hasFilters
                     ? "Try removing some filters to see more results."
-                    : "No products are available right now."}
-                </p>
-                {hasFilters && (
+                    : "No products are available right now."
+                }
+                action={
+                  hasFilters ? (
                   <button
+                    type="button"
                     onClick={clearFilters}
                     className="px-5 py-2 text-sm font-medium bg-app-green text-white rounded-xl hover:bg-app-green-light transition-colors"
                   >
                     Clear Filters
                   </button>
-                )}
-              </div>
+                  ) : null
+                }
+              />
             ) : (
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                 {products.map(
@@ -200,13 +205,20 @@ const Products = () => {
           <div
             className="fixed inset-0 bg-black/40 z-50"
             onClick={() => setMobileFiltersOpen(false)}
+            aria-hidden="true"
           />
-          <div className="fixed bottom-0 left-0 right-0 bg-white z-50 rounded-t-2xl max-h-[85vh] overflow-y-auto animate-slide-in-up">
+          <div
+            className="fixed bottom-0 left-0 right-0 bg-white z-50 rounded-t-2xl max-h-[85vh] overflow-y-auto animate-slide-in-up"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="mobile-filters-title"
+          >
             <div className="flex items-center justify-between p-4 border-b border-app-border sticky top-0 bg-white">
-              <h3 className="text-lg font-semibold text-app-green">
+              <h3 id="mobile-filters-title" className="text-lg font-semibold text-app-green">
                 Filter &amp; Sort
               </h3>
               <button
+                type="button"
                 onClick={() => setMobileFiltersOpen(false)}
                 className="p-2 hover:bg-app-cream rounded-lg transition-colors"
                 aria-label="Close filters"

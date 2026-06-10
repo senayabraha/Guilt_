@@ -1,9 +1,10 @@
 import { useState, useEffect, useMemo } from "react";
-import { TruckIcon, SearchIcon, XIcon } from "lucide-react";
+import { TruckIcon, SearchIcon, XIcon, ClipboardListIcon } from "lucide-react";
 import toast from "react-hot-toast";
 
 import type { DeliveryPartner } from "../../types";
 import Loading from "../../components/Loading";
+import StatusState from "../../components/StatusState";
 import {
   getAllOrders,
   updateOrderStatus,
@@ -143,6 +144,7 @@ export default function AdminOrders() {
         <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
           {STATUS_FILTERS.map((f) => (
             <button
+              type="button"
               key={f.value}
               onClick={() => setFilterStatus(f.value)}
               className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
@@ -178,8 +180,17 @@ export default function AdminOrders() {
               <tbody className="divide-y divide-app-border">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-6 py-10 text-center text-zinc-500">
-                      {search ? "No orders match your search." : "No orders found."}
+                    <td colSpan={6} className="px-6 py-8">
+                      <StatusState
+                        icon={ClipboardListIcon}
+                        title={search ? "No orders match your search" : "No orders found"}
+                        description={
+                          search
+                            ? "Try searching by a different order ID or customer."
+                            : "Marketplace orders will appear here once customers check out."
+                        }
+                        className="border-dashed"
+                      />
                     </td>
                   </tr>
                 ) : (
@@ -228,6 +239,7 @@ export default function AdminOrders() {
                           </div>
                         ) : (
                           <button
+                            type="button"
                             onClick={() => {
                               setAssignModal(order.id);
                               setSelectedPartner("");
@@ -271,11 +283,17 @@ export default function AdminOrders() {
           <div
             className="fixed inset-0 bg-black/30 z-50"
             onClick={() => setDetailOrder(null)}
+            aria-hidden="true"
           />
-          <div className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white z-50 overflow-y-auto animate-fade-in shadow-2xl">
+          <aside
+            className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-white z-50 overflow-y-auto animate-fade-in shadow-2xl"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="admin-order-detail-title"
+          >
             <div className="sticky top-0 bg-white border-b border-app-border px-6 py-4 flex items-center justify-between">
               <div>
-                <p className="font-semibold text-zinc-900">
+                <p id="admin-order-detail-title" className="font-semibold text-zinc-900">
                   Order #{detailOrder.id.slice(-6).toUpperCase()}
                 </p>
                 <p className="text-xs text-zinc-500">
@@ -283,8 +301,10 @@ export default function AdminOrders() {
                 </p>
               </div>
               <button
+                type="button"
                 onClick={() => setDetailOrder(null)}
                 className="p-2 hover:bg-app-cream rounded-lg transition-colors"
+                aria-label="Close order details"
               >
                 <XIcon className="size-5" />
               </button>
@@ -415,6 +435,7 @@ export default function AdminOrders() {
                     Delivery Partner
                   </p>
                   <button
+                    type="button"
                     onClick={() => {
                       setAssignModal(detailOrder.id);
                       setSelectedPartner("");
@@ -447,7 +468,7 @@ export default function AdminOrders() {
                 </select>
               </div>
             </div>
-          </div>
+          </aside>
         </>
       )}
 
@@ -457,10 +478,16 @@ export default function AdminOrders() {
           <div
             className="fixed inset-0 bg-app-cream/80 backdrop-blur z-50"
             onClick={() => setAssignModal(null)}
+            aria-hidden="true"
           />
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-2xl p-6 w-full max-w-sm animate-fade-in">
-              <h3 className="text-lg font-semibold text-app-green mb-4">
+            <div
+              className="bg-white rounded-2xl p-6 w-full max-w-sm animate-fade-in"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="assign-partner-title"
+            >
+              <h3 id="assign-partner-title" className="text-lg font-semibold text-app-green mb-4">
                 Assign Delivery Partner
               </h3>
               {partners.length === 0 ? (
@@ -501,12 +528,14 @@ export default function AdminOrders() {
               )}
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={() => setAssignModal(null)}
                   className="flex-1 py-2.5 text-sm font-medium text-zinc-600 bg-zinc-100 rounded-xl hover:bg-zinc-200 transition-colors"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handleAssign}
                   disabled={!selectedPartner}
                   className="flex-1 py-2.5 text-sm font-medium text-white bg-app-green rounded-xl hover:bg-app-green-light transition-colors disabled:opacity-50"

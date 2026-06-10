@@ -26,6 +26,7 @@ body {
   background-color: var(--color-app-cream);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 /* Scrollbar */
@@ -55,6 +56,11 @@ button {
 }
 input:focus {
   outline: none;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-app-orange);
+  outline-offset: 2px;
 }
 
 .flex-center {

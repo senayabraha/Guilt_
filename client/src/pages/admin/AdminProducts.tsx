@@ -1,10 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
-import { PlusIcon, EditIcon, XIcon, SearchIcon } from "lucide-react";
+import { PlusIcon, EditIcon, XIcon, SearchIcon, PackageIcon } from "lucide-react";
 import toast from "react-hot-toast";
 
 import type { Product } from "../../types";
 import Loading from "../../components/Loading";
+import StatusState from "../../components/StatusState";
 import { getAllProducts, deactivateProduct } from "../../lib/db/products";
 import { formatCurrency } from "../../lib/format";
 
@@ -97,6 +98,7 @@ export default function AdminProducts() {
       <div className="flex gap-1.5">
         {STOCK_FILTERS.map((f) => (
           <button
+            type="button"
             key={f.value}
             onClick={() => setStockFilter(f.value)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors ${
@@ -136,11 +138,18 @@ export default function AdminProducts() {
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-6 py-10 text-center text-zinc-500"
+                    className="px-6 py-8"
                   >
-                    {search
-                      ? "No products match your search."
-                      : "No products found."}
+                    <StatusState
+                      icon={PackageIcon}
+                      title={search ? "No products match your search" : "No products found"}
+                      description={
+                        search
+                          ? "Try a different product name or category."
+                          : "Products created by admins and vendors will appear here."
+                      }
+                      className="border-dashed"
+                    />
                   </td>
                 </tr>
               ) : (
@@ -194,6 +203,7 @@ export default function AdminProducts() {
                             Deactivate?
                           </span>
                           <button
+                            type="button"
                             onClick={() =>
                               handleDeactivate(product.id || product._id)
                             }
@@ -202,6 +212,7 @@ export default function AdminProducts() {
                             Yes
                           </button>
                           <button
+                            type="button"
                             onClick={() => setConfirmDeactivate(null)}
                             className="px-2.5 py-1 text-xs font-medium text-zinc-600 bg-zinc-100 rounded-lg hover:bg-zinc-200 transition-colors"
                           >
@@ -213,15 +224,18 @@ export default function AdminProducts() {
                           <Link
                             to={`/admin/products/${product.id}/edit`}
                             className="p-2 text-zinc-500 hover:text-app-orange bg-zinc-100 hover:bg-orange-50 rounded-lg transition-colors"
+                            aria-label={`Edit ${product.name}`}
                           >
                             <EditIcon className="size-4" />
                           </Link>
                           {(product.isActive || product.stock > 0) && (
                             <button
+                              type="button"
                               onClick={() =>
                                 setConfirmDeactivate(product.id || product._id)
                               }
                               title="Mark Out of Stock"
+                              aria-label={`Mark ${product.name} out of stock`}
                               className="p-2 text-zinc-500 hover:text-red-600 bg-zinc-100 hover:bg-red-50 rounded-lg transition-colors"
                             >
                               <XIcon className="size-4" />

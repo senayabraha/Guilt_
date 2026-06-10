@@ -102,6 +102,7 @@ export default function AdminStores() {
       <div className="flex gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
         {STATUS_FILTERS.map((f) => (
           <button
+            type="button"
             key={f.value}
             onClick={() => setFilterStatus(f.value)}
             className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors ${
@@ -200,12 +201,14 @@ export default function AdminStores() {
                             Suspend?
                           </span>
                           <button
+                            type="button"
                             onClick={() => handleSuspend(store.id)}
                             className="px-2.5 py-1 text-xs font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
                           >
                             Yes
                           </button>
                           <button
+                            type="button"
                             onClick={() => setConfirmSuspend(null)}
                             className="px-2.5 py-1 text-xs font-medium text-zinc-600 bg-zinc-100 rounded-lg hover:bg-zinc-200 transition-colors"
                           >
@@ -216,8 +219,10 @@ export default function AdminStores() {
                         <div className="flex items-center justify-end gap-2">
                           {store.status !== "APPROVED" && (
                             <button
+                              type="button"
                               onClick={() => handleApprove(store.id)}
                               title="Approve"
+                              aria-label={`Approve ${store.name}`}
                               className="p-2 text-green-600 bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
                             >
                               <CheckIcon className="size-4" />
@@ -225,8 +230,10 @@ export default function AdminStores() {
                           )}
                           {store.status !== "SUSPENDED" && (
                             <button
+                              type="button"
                               onClick={() => setConfirmSuspend(store.id)}
                               title="Suspend"
+                              aria-label={`Suspend ${store.name}`}
                               className="p-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
                             >
                               <BanIcon className="size-4" />
@@ -235,6 +242,7 @@ export default function AdminStores() {
                           <Link
                             to={`/admin/stores/${store.id}`}
                             title="View"
+                            aria-label={`View ${store.name}`}
                             className="p-2 text-zinc-500 bg-zinc-100 hover:bg-orange-50 hover:text-app-orange rounded-lg transition-colors"
                           >
                             <EyeIcon className="size-4" />

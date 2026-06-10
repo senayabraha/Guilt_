@@ -12,6 +12,7 @@ import toast from "react-hot-toast";
 import { useCart } from "../context/CartContext";
 import { statusColors } from "../assets/assets";
 import Loading from "../components/Loading";
+import StatusState from "../components/StatusState";
 import { getMyOrders } from "../lib/db/orders";
 import type { Order } from "../types";
 import { formatCurrency } from "../lib/format";
@@ -142,6 +143,7 @@ const MyOrders = () => {
             disabled={refreshing}
             onClick={() => fetchOrders(false)}
             title="Refresh"
+            aria-label="Refresh orders"
             className="p-2 rounded-xl border border-app-border text-app-text-light hover:text-app-green hover:border-app-green transition-colors disabled:opacity-40"
           >
             <RefreshCwIcon className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
@@ -188,23 +190,21 @@ const MyOrders = () => {
         {loading ? (
           <Loading />
         ) : orders.length === 0 ? (
-          <div className="bg-white rounded-2xl p-12 text-center">
-            <PackageIcon className="size-14 text-app-border mx-auto mb-4" />
-            <h2 className="text-lg font-semibold text-zinc-800 mb-2">
-              {emptyCtx.heading}
-            </h2>
-            <p className="text-sm text-app-text-light mb-6 max-w-xs mx-auto">
-              {emptyCtx.sub}
-            </p>
-            {activeTab === "all" && (
+          <StatusState
+            icon={PackageIcon}
+            title={emptyCtx.heading}
+            description={emptyCtx.sub}
+            action={
+              activeTab === "all" ? (
               <Link
                 to="/products"
                 className="inline-flex px-5 py-2.5 bg-app-green text-white text-sm font-semibold rounded-xl hover:bg-app-green/90 transition-colors"
               >
                 Browse Products
               </Link>
-            )}
-          </div>
+              ) : null
+            }
+          />
         ) : (
           <div className="space-y-3">
             {orders.map((order) => {

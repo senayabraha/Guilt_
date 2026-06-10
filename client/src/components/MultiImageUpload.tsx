@@ -107,6 +107,7 @@ const MultiImageUpload = ({
                 type="button"
                 onClick={() => makePrimary(i)}
                 title="Set as primary image"
+                aria-label={`Set product image ${i + 1} as primary`}
                 className="absolute top-1 left-1 inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-full bg-white/90 text-app-green text-[9px] font-semibold leading-none hover:bg-white transition-colors"
               >
                 <StarIcon className="size-2.5" /> Primary
@@ -117,6 +118,7 @@ const MultiImageUpload = ({
               type="button"
               onClick={() => removeAt(i)}
               title="Remove image"
+              aria-label={`Remove product image ${i + 1}`}
               className="absolute top-1 right-1 size-5 rounded-full bg-black/55 text-white flex items-center justify-center hover:bg-black/75 transition-colors"
             >
               <XIcon className="size-3" />

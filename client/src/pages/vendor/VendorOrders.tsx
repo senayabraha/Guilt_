@@ -5,6 +5,7 @@ import toast from "react-hot-toast";
 
 import type { Order, Store } from "../../types";
 import Loading from "../../components/Loading";
+import StatusState from "../../components/StatusState";
 import { statusColors } from "../../assets/assets";
 import { getMyStoreById } from "../../lib/db/stores";
 import { getStoreOrders } from "../../lib/db/orders";
@@ -196,6 +197,7 @@ export default function VendorOrders() {
           disabled={refreshing}
           onClick={() => fetchOrders(filter, false)}
           title="Refresh orders"
+          aria-label="Refresh vendor orders"
           className="ml-auto p-2 rounded-xl border border-app-border text-app-text-light hover:text-app-green hover:border-app-green transition-colors disabled:opacity-40"
         >
           <RefreshCwIcon className={`size-4 ${refreshing ? "animate-spin" : ""}`} />
@@ -215,8 +217,13 @@ export default function VendorOrders() {
         {loading ? (
           <Loading />
         ) : orders.length === 0 ? (
-          <div className="px-5 py-12 text-center text-zinc-500 text-sm">
-            No orders found for this filter.
+          <div className="px-5 py-8">
+            <StatusState
+              icon={RefreshCwIcon}
+              title="No orders found"
+              description="Orders for the selected status will appear here as customers place them."
+              className="border-dashed"
+            />
           </div>
         ) : (
           <>

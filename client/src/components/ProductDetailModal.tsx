@@ -225,6 +225,8 @@ const ProductDetailModal = ({ product, onClose }: Props) => {
                           ? "border-app-green ring-2 ring-app-green/20"
                           : "border-app-border opacity-70 hover:opacity-100"
                       }`}
+                      aria-label={`Show ${product.name} image ${i + 1}`}
+                      aria-current={i === index ? "true" : undefined}
                     >
                       <img src={url} alt="" className="w-full h-full object-cover" />
                     </button>

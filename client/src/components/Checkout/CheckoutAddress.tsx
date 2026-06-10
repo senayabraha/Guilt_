@@ -25,6 +25,8 @@ const CheckoutAddress = ({
   setInstructions,
 }: Props) => {
   const canContinue = !!address.city && phone.trim().length >= 7;
+  const phoneId = "checkout-phone";
+  const instructionsId = "checkout-instructions";
 
   return (
     <div className="bg-white rounded-2xl p-6 animate-fade-in space-y-6">
@@ -43,14 +45,16 @@ const CheckoutAddress = ({
               const isSelected =
                 address._id === addr._id || address.id === addr.id;
               return (
-                <div
+                <button
+                  type="button"
                   key={addr._id || addr.id}
                   onClick={() => setAddress(addr)}
-                  className={`p-4 rounded-xl border cursor-pointer transition-colors ${
+                  className={`w-full p-4 text-left rounded-xl border cursor-pointer transition-colors ${
                     isSelected
                       ? "border-app-green bg-app-cream"
                       : "border-app-border hover:bg-app-cream"
                   }`}
+                  aria-pressed={isSelected}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <MapPinIcon className="size-4 text-app-green" />
@@ -81,7 +85,7 @@ const CheckoutAddress = ({
                       No map pin — edit to add one
                     </p>
                   )}
-                </div>
+                </button>
               );
             })}
           </div>
@@ -106,12 +110,13 @@ const CheckoutAddress = ({
 
       {/* Phone number */}
       <div>
-        <label className="block text-sm font-semibold text-app-green mb-2">
+        <label htmlFor={phoneId} className="block text-sm font-semibold text-app-green mb-2">
           Phone Number <span className="text-app-error">*</span>
         </label>
         <div className="relative">
           <PhoneIcon className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-zinc-400" />
           <input
+            id={phoneId}
             type="tel"
             value={phone}
             onChange={(e) => setPhone(e.target.value)}
@@ -126,11 +131,12 @@ const CheckoutAddress = ({
 
       {/* Delivery instructions */}
       <div>
-        <label className="block text-sm font-semibold text-app-green mb-2">
+        <label htmlFor={instructionsId} className="block text-sm font-semibold text-app-green mb-2">
           Delivery Instructions{" "}
           <span className="text-app-text-light font-normal">(optional)</span>
         </label>
         <textarea
+          id={instructionsId}
           value={instructions}
           onChange={(e) => setInstructions(e.target.value)}
           placeholder="E.g. Ring the bell, leave at gate, call before arriving…"
@@ -142,6 +148,7 @@ const CheckoutAddress = ({
       {/* Actions */}
       <div className="flex flex-col gap-3 pt-1">
         <button
+          type="button"
           onClick={() => {
             setStep("payment");
             scrollTo(0, 0);

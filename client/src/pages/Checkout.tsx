@@ -6,6 +6,7 @@ import {
   ChevronRightIcon,
   CreditCardIcon,
   MapPinIcon,
+  ShoppingBagIcon,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -14,6 +15,7 @@ import type { Address } from "../types";
 import CheckoutAddress from "../components/Checkout/CheckoutAddress";
 import CheckoutPayment from "../components/Checkout/CheckoutPayment";
 import CheckoutReview from "../components/Checkout/CheckoutReview";
+import StatusState from "../components/StatusState";
 import { getMyAddresses } from "../lib/db/addresses";
 import { placeOrder } from "../lib/db/orders";
 import { formatCurrency } from "../lib/format";
@@ -103,20 +105,20 @@ const Checkout = () => {
   if (items.length === 0) {
     return (
       <div className="min-h-screen bg-app-cream flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-xl font-semibold text-app-green mb-2">
-            Your cart is empty
-          </h2>
-          <p className="text-sm text-app-text-light mb-4">
-            Add some products to checkout
-          </p>
+        <StatusState
+          icon={ShoppingBagIcon}
+          title="Your cart is empty"
+          description="Add products to your cart before starting checkout."
+          action={
           <button
+            type="button"
             onClick={() => navigate("/products")}
             className="px-5 py-2.5 bg-app-green text-white text-sm font-medium rounded-xl hover:bg-app-green-light transition-colors"
           >
             Browse Products
           </button>
-        </div>
+          }
+        />
       </div>
     );
   }
@@ -126,6 +128,7 @@ const Checkout = () => {
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Back Button */}
         <button
+          type="button"
           onClick={() => navigate(-1)}
           className="flex items-center gap-2 text-sm text-app-text-light hover:text-app-green mb-6 transition-colors"
         >
@@ -139,6 +142,7 @@ const Checkout = () => {
           {steps.map((s, i) => (
             <div key={s.key} className="flex items-center gap-2">
               <button
+                type="button"
                 onClick={() => setStep(s.key)}
                 className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-colors ${step === s.key ? "bg-app-green text-white" : "bg-white text-app-text-light"}`}
               >
