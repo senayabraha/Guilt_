@@ -1,6 +1,7 @@
 import { supabase } from "../supabase";
 import { mapOrder } from "./mappers";
 import type { Order, OrderItem, OrderPrepStatus } from "../../types";
+import { notifyOrderStatusChanged } from "./notifications";
 
 const VENDOR_ORDER_FULL =
   "*, store:stores(*), delivery_partner:delivery_partners(*), user:profiles(id, name, email, phone)";
@@ -47,6 +48,9 @@ async function updateStatusWithHistory(
     .select(VENDOR_ORDER_FULL)
     .single();
   if (error) throw error;
+  notifyOrderStatusChanged(orderId, status).catch((err) =>
+    console.warn("Failed to create vendor order notification", err),
+  );
   return mapOrder(data);
 }
 

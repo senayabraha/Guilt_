@@ -1,6 +1,7 @@
 import { supabase } from "../supabase";
 import { mapDeliveryPartner, mapOrder } from "./mappers";
 import type { DeliveryPartner, Order } from "../../types";
+import { notifyOrderStatusChanged } from "./notifications";
 
 const PICKUP_FULL =
   "*, store:stores(*), user:profiles(id, name, email, phone)";
@@ -69,6 +70,9 @@ export async function completeDelivery(id: string, otp: string): Promise<void> {
     otp_input: otp,
   });
   if (error) throw error;
+  notifyOrderStatusChanged(id, "Delivered").catch((err) =>
+    console.warn("Failed to create delivery completion notification", err),
+  );
 }
 
 // --- Admin management ---

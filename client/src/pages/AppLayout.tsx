@@ -4,19 +4,22 @@ import Banner from "../components/Banner";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import CartSidebar from "../components/CartSidebar";
+import { FavoritesProvider } from "../context/FavoritesContext";
 
 const AppLayout = () => {
   return (
     <>
-      <Banner />
-      <Navbar />
+      <FavoritesProvider>
+        <Banner />
+        <Navbar />
 
-      <main className="min-h-screen">
-        <Outlet />
-      </main>
+        <main className="min-h-screen">
+          <Outlet />
+        </main>
 
-      <Footer />
-      <CartSidebar />
+        <Footer />
+        <CartSidebar />
+      </FavoritesProvider>
     </>
   );
 };

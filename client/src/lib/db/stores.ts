@@ -1,6 +1,7 @@
 import { supabase } from "../supabase";
 import { mapStore, mapProduct, toStoreRow } from "./mappers";
 import type { Product, Store } from "../../types";
+import { notifyStorePending, notifyStoreStatusChanged } from "./notifications";
 
 // Public store reads must NOT request orders(count): selecting related orders
 // triggers the orders RLS policy (which references stores), causing infinite
@@ -102,6 +103,9 @@ export async function applyForStore(
     .select("*")
     .single();
   if (error) throw error;
+  notifyStorePending(data.id).catch((err) =>
+    console.warn("Failed to create pending store notification", err),
+  );
   return mapStore(data);
 }
 
@@ -159,6 +163,9 @@ export async function setStoreStatus(
     .select("*")
     .single();
   if (error) throw error;
+  notifyStoreStatusChanged(id, status).catch((err) =>
+    console.warn("Failed to create store status notification", err),
+  );
   return mapStore(data);
 }
 

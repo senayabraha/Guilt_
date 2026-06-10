@@ -138,3 +138,18 @@ export interface Order {
   isPaid: boolean;
   createdAt: string;
 }
+
+export type NotificationAudience = "CUSTOMER" | "VENDOR" | "ADMIN" | "DELIVERY";
+
+export interface Notification {
+  id: string;
+  userId: string;
+  audience: NotificationAudience;
+  type: string;
+  title: string;
+  message: string;
+  entityType?: string | null;
+  entityId?: string | null;
+  readAt?: string | null;
+  createdAt: string;
+}

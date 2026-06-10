@@ -48,8 +48,10 @@ export default function DeliveryLayout() {
               {partner.name}
             </span>
             <button
+              type="button"
               onClick={handleLogout}
               className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+              aria-label="Log out of delivery account"
             >
               <LogOutIcon className="size-4" />
             </button>

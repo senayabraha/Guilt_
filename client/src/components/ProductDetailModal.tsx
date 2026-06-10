@@ -5,6 +5,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   ClockIcon,
+  HeartIcon,
   LeafIcon,
   MessageCircleIcon,
   MinusIcon,
@@ -17,6 +18,7 @@ import {
 
 import type { Product } from "../types";
 import { useCart } from "../context/CartContext";
+import { useFavorites } from "../context/useFavorites";
 import { deliveryEstimate, formatCurrency } from "../lib/format";
 
 interface Props {
@@ -38,6 +40,7 @@ const stockBadgeClass = (stock: number) => {
 
 const ProductDetailModal = ({ product, onClose }: Props) => {
   const { addToCart } = useCart();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const images =
     product.images && product.images.length
       ? product.images.filter(Boolean)
@@ -71,7 +74,8 @@ const ProductDetailModal = ({ product, onClose }: Props) => {
     if (touchStartX.current === null) return;
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     if (Math.abs(dx) > 40 && images.length > 1) {
-      dx < 0 ? next() : prev();
+      if (dx < 0) next();
+      else prev();
     }
     touchStartX.current = null;
   };
@@ -82,6 +86,8 @@ const ProductDetailModal = ({ product, onClose }: Props) => {
 
   const storeId = product.store?.id || product.storeId;
   const store = product.store;
+  const productId = product.id || product._id;
+  const saved = isFavorite(productId);
 
   // Delivery info derived from real store fields — no invented data
   const eta = store?.id ? deliveryEstimate({ id: store.id, deliveryRadius: store.deliveryRadius }) : null;
@@ -125,14 +131,29 @@ const ProductDetailModal = ({ product, onClose }: Props) => {
               {product.name}
             </h2>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-xl hover:bg-app-cream transition-colors shrink-0"
-            aria-label="Close product details"
-          >
-            <XIcon className="size-5" />
-          </button>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => toggleFavorite(productId, product.name)}
+              className={`p-2 rounded-xl transition-colors shrink-0 ${
+                saved
+                  ? "bg-orange-50 text-app-orange"
+                  : "hover:bg-app-cream text-app-text-light hover:text-app-orange"
+              }`}
+              aria-label={saved ? `Unsave ${product.name}` : `Save ${product.name}`}
+              aria-pressed={saved}
+            >
+              <HeartIcon className={`size-5 ${saved ? "fill-app-orange" : ""}`} />
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="p-2 rounded-xl hover:bg-app-cream transition-colors shrink-0"
+              aria-label="Close product details"
+            >
+              <XIcon className="size-5" />
+            </button>
+          </div>
         </div>
 
         {/* Scrollable body */}

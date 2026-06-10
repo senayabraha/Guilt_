@@ -6,6 +6,8 @@ import {
   PhoneIcon,
   BikeIcon,
   Home,
+  ClockIcon,
+  ShieldCheckIcon,
 } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -13,7 +15,7 @@ import type { Product, Store } from "../types";
 import ProductCard from "../components/ProductCard";
 import Loading from "../components/Loading";
 import { getPublicStore, getPublicStoreProducts } from "../lib/db/stores";
-import { formatCurrency } from "../lib/format";
+import { deliveryEstimate, formatCurrency, storeLocation } from "../lib/format";
 
 const StoreDetail = () => {
   const { id } = useParams();
@@ -33,8 +35,8 @@ const StoreDetail = () => {
         ]);
         setStore(storeData);
         setProducts(productsData);
-      } catch (error: any) {
-        toast.error(error?.message || "Failed to load store");
+      } catch (error: unknown) {
+        toast.error(error instanceof Error ? error.message : "Failed to load store");
       } finally {
         setLoading(false);
       }
@@ -139,22 +141,34 @@ const StoreDetail = () => {
               </div>
             )}
 
-            <div className="flex flex-wrap gap-x-5 gap-y-2 mt-4 text-xs text-app-text-light">
-              <span className="flex items-center gap-1">
-                <MapPinIcon className="size-3.5" /> {store.address}, {store.city},{" "}
-                {store.state}
+            <div className="mt-4 grid gap-2 rounded-2xl border border-app-border bg-app-cream/50 p-3 text-xs text-app-text-light sm:grid-cols-2 lg:grid-cols-4">
+              <span className="flex items-center gap-1.5">
+                <ShieldCheckIcon className="size-3.5 text-app-green" />
+                {store.isOpen ? "Accepting orders" : "Currently closed"}
               </span>
+              <span className="flex items-center gap-1.5">
+                <ClockIcon className="size-3.5 text-app-green" />
+                Est. delivery {deliveryEstimate(store)}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <BikeIcon className="size-3.5 text-app-green" />
+                {(store.deliveryFee ?? 0) > 0
+                  ? `${formatCurrency(store.deliveryFee)} delivery`
+                  : "Free delivery"}
+              </span>
+              <span className="flex items-center gap-1.5">
+                <MapPinIcon className="size-3.5 text-app-green" />
+                {storeLocation(store)}
+              </span>
+            </div>
+
+            <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2 text-xs text-app-text-light">
+              <span>Minimum order {formatCurrency(store.minOrder ?? 0)}</span>
               {store.phone && (
                 <span className="flex items-center gap-1">
                   <PhoneIcon className="size-3.5" /> {store.phone}
                 </span>
               )}
-              <span className="flex items-center gap-1">
-                <BikeIcon className="size-3.5" /> {formatCurrency(store.deliveryFee ?? 0)} delivery
-              </span>
-              <span>
-                Min order {formatCurrency(store.minOrder ?? 0)}
-              </span>
             </div>
           </div>
         </div>

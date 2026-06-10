@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { createPortal } from "react-dom";
-import { LeafIcon, Plus, Star, StoreIcon } from "lucide-react";
+import { HeartIcon, LeafIcon, Plus, Star, StoreIcon } from "lucide-react";
 
 import type { Product } from "../types";
 import { useCart } from "../context/CartContext";
+import { useFavorites } from "../context/useFavorites";
 import { formatCurrency } from "../lib/format";
 import ProductDetailModal from "./ProductDetailModal";
 
@@ -13,10 +14,13 @@ interface Props {
 
 const ProductCard = ({ product }: Props) => {
   const { addToCart } = useCart();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [showProductDetails, setShowProductDetails] = useState(false);
 
   const isOutOfStock = product.stock <= 0;
   const isLowStock = !isOutOfStock && product.stock <= 5;
+  const productId = product.id || product._id;
+  const saved = isFavorite(productId);
 
   return (
     <>
@@ -51,6 +55,23 @@ const ProductCard = ({ product }: Props) => {
               </span>
             )}
           </div>
+
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              toggleFavorite(productId, product.name);
+            }}
+            className={`absolute right-3 top-3 flex size-8 items-center justify-center rounded-full shadow-sm transition-colors ${
+              saved
+                ? "bg-app-orange text-white"
+                : "bg-white/90 text-zinc-600 hover:bg-white hover:text-app-orange"
+            }`}
+            aria-label={saved ? `Unsave ${product.name}` : `Save ${product.name}`}
+            aria-pressed={saved}
+          >
+            <HeartIcon className={`size-4 ${saved ? "fill-white" : ""}`} />
+          </button>
 
           {/* Out-of-stock overlay label — bottom-centre of image */}
           {isOutOfStock && (

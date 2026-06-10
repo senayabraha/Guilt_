@@ -5,6 +5,7 @@ import {
   MapPinIcon,
   MenuIcon,
   PackageIcon,
+  HeartIcon,
   SearchIcon,
   ShieldIcon,
   ShoppingBasketIcon,
@@ -18,6 +19,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { useCart } from "../context/CartContext";
 import { useAuth } from "../context/AuthContext";
+import NotificationsDropdown from "./NotificationsDropdown";
 
 const Navbar = () => {
   const { user, logout } = useAuth();
@@ -133,6 +135,8 @@ const Navbar = () => {
               )}
             </button>
 
+            <NotificationsDropdown />
+
             {/* User menu */}
             <div className="relative">
               {user ? (
@@ -191,6 +195,11 @@ const Navbar = () => {
                       {user && (
                         <Link to="/orders" className="dropdown-link">
                           <PackageIcon size={16} /> My Orders
+                        </Link>
+                      )}
+                      {user && (
+                        <Link to="/saved" className="dropdown-link">
+                          <HeartIcon size={16} /> Saved Items
                         </Link>
                       )}
                       {user && (

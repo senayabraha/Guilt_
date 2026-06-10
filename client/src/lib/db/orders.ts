@@ -1,6 +1,11 @@
 import { supabase } from "../supabase";
 import { mapOrder } from "./mappers";
 import type { Order } from "../../types";
+import {
+  notifyDeliveryAssigned,
+  notifyOrderPlaced,
+  notifyOrderStatusChanged,
+} from "./notifications";
 
 const ORDER_FULL =
   "*, store:stores(*), delivery_partner:delivery_partners(*), user:profiles(id, name, email, phone)";
@@ -19,7 +24,11 @@ export async function placeOrder(params: {
     shipping: params.shippingAddress ?? {},
   });
   if (error) throw error;
-  return data as string;
+  const orderId = data as string;
+  notifyOrderPlaced(orderId).catch((err) =>
+    console.warn("Failed to create order notification", err),
+  );
+  return orderId;
 }
 
 export async function getMyOrders(status?: string): Promise<Order[]> {
@@ -114,6 +123,9 @@ export async function updateOrderStatus(
     .select(ORDER_FULL)
     .single();
   if (error) throw error;
+  notifyOrderStatusChanged(id, status).catch((err) =>
+    console.warn("Failed to create order status notification", err),
+  );
   return mapOrder(data);
 }
 
@@ -154,4 +166,7 @@ export async function assignDeliveryPartner(
     })
     .eq("id", orderId);
   if (error) throw error;
+  notifyDeliveryAssigned(orderId).catch((err) =>
+    console.warn("Failed to create delivery assignment notification", err),
+  );
 }
