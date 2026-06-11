@@ -1,64 +1,54 @@
 import { Link } from "react-router-dom";
-import {
-  BikeIcon,
-  ClockIcon,
-  MapPinIcon,
-  ShoppingBasketIcon,
-} from "lucide-react";
+import { BikeIcon, MapPinIcon, ShoppingBasketIcon, StarIcon } from "lucide-react";
 
 import type { Store } from "../types";
-import {
-  deliveryEstimate,
-  formatCurrency,
-  storeLocation,
-  storeTags,
-} from "../lib/format";
+import { formatCurrency, storeLocation } from "../lib/format";
+import { storeDistanceLabel, type Coords } from "../lib/geo";
 
 interface Props {
   store: Store;
+  pin?: Coords | null;
   className?: string;
 }
 
-// Instacart-style store card: answers "how soon, where, is it open, what type,
-// cash on delivery?, delivery fee" at a glance.
-const StoreCard = ({ store, className = "" }: Props) => {
-  const tags = storeTags(store);
+const StoreCard = ({ store, pin, className = "" }: Props) => {
+  const distance = storeDistanceLabel(store, pin ?? null);
 
   return (
     <Link
       to={`/stores/${store.id}`}
       className={`bg-white rounded-2xl overflow-hidden shadow hover:shadow-md transition-all duration-300 group animate-fade-in flex flex-col ${className}`}
     >
-      {/* Cover */}
-      <div className="relative h-28 bg-app-green/10 overflow-hidden">
+      {/* Cover image */}
+      <div className="relative h-32 bg-app-green/10 overflow-hidden">
         {store.coverImage ? (
           <img
             src={store.coverImage}
             alt={store.name}
-            className="w-full h-full object-cover"
+            className="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300"
           />
         ) : (
           <div className="w-full h-full flex-center text-app-green/30">
-            <ShoppingBasketIcon className="size-9" />
+            <ShoppingBasketIcon className="size-10" />
           </div>
         )}
+
+        {/* Open/Closed badge */}
         <span
-          className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-semibold ${
+          className={`absolute top-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-semibold shadow-sm ${
             store.isOpen
               ? "bg-green-100 text-green-700"
-              : "bg-zinc-200 text-zinc-600"
+              : "bg-zinc-800/70 text-zinc-100"
           }`}
         >
-          {store.isOpen ? "Open now" : "Closed"}
-        </span>
-        <span className="absolute bottom-3 left-3 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-semibold bg-white/90 text-app-green shadow-sm">
-          <ClockIcon className="size-3" /> {deliveryEstimate(store)}
+          {store.isOpen ? "Open" : "Closed"}
         </span>
       </div>
 
-      {/* Info */}
+      {/* Info section */}
       <div className="p-4 flex flex-col flex-1">
-        <div className="flex items-center gap-3 -mt-9 mb-3">
+        {/* Logo floated above content */}
+        <div className="flex items-end gap-3 -mt-10 mb-3">
           <div className="size-14 rounded-xl bg-white border border-app-border overflow-hidden shrink-0 flex-center shadow-sm">
             {store.logo ? (
               <img
@@ -72,36 +62,62 @@ const StoreCard = ({ store, className = "" }: Props) => {
           </div>
         </div>
 
+        {/* Name */}
         <h3 className="text-base font-semibold text-zinc-900 group-hover:text-app-green transition-colors line-clamp-1">
           {store.name}
         </h3>
 
-        <p className="text-xs text-app-text-light mt-1 flex items-center gap-1">
-          <MapPinIcon className="size-3 shrink-0" /> {storeLocation(store)}
-        </p>
+        {/* Status row: open badge + distance + rating */}
+        <div className="flex items-center gap-2 mt-1 flex-wrap">
+          <span
+            className={`text-xs font-medium ${
+              store.isOpen ? "text-green-600" : "text-zinc-400"
+            }`}
+          >
+            {store.isOpen ? "Open now" : "Closed"}
+          </span>
 
-        {/* Tags */}
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {tags.slice(0, 3).map((t) => (
-            <span
-              key={t}
-              className="px-2 py-0.5 text-[10px] font-medium bg-orange-50 text-app-orange-dark rounded-full"
-            >
-              {t}
-            </span>
-          ))}
+          {distance && (
+            <>
+              <span className="text-zinc-300 text-xs">·</span>
+              <span className="flex items-center gap-0.5 text-xs text-zinc-500">
+                <MapPinIcon className="size-3 shrink-0" />
+                {distance}
+              </span>
+            </>
+          )}
+
+          {(store as any).rating > 0 && (
+            <>
+              <span className="text-zinc-300 text-xs">·</span>
+              <span className="flex items-center gap-0.5 text-xs text-zinc-600 font-medium">
+                <StarIcon className="size-3 text-amber-400 fill-amber-400 shrink-0" />
+                {Number((store as any).rating).toFixed(1)}
+              </span>
+            </>
+          )}
         </div>
 
-        {/* Delivery / min order */}
-        <div className="flex items-center justify-between mt-auto pt-3 mt-3 border-t border-app-border text-xs text-app-text-light">
+        {/* Location */}
+        {!distance && (
+          <p className="text-xs text-app-text-light mt-1 flex items-center gap-1">
+            <MapPinIcon className="size-3 shrink-0" />
+            {storeLocation(store)}
+          </p>
+        )}
+
+        {/* Delivery + min order */}
+        <div className="flex items-center justify-between mt-auto pt-3 border-t border-app-border text-xs text-app-text-light mt-3">
           <span className="flex items-center gap-1">
-            <BikeIcon className="size-3" />{" "}
+            <BikeIcon className="size-3.5" />
             {(store.deliveryFee ?? 0) > 0
               ? `${formatCurrency(store.deliveryFee)} delivery`
               : "Free delivery"}
           </span>
           {(store.minOrder ?? 0) > 0 && (
-            <span>Min {formatCurrency(store.minOrder)}</span>
+            <span className="text-zinc-500">
+              Min {formatCurrency(store.minOrder)}
+            </span>
           )}
         </div>
       </div>

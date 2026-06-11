@@ -16,11 +16,18 @@ const Stores = () => {
   const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
-  const [query, setQuery] = useState("");
+  const [query, setQuery] = useState(searchParams.get("q") || "");
   const [nearby, setNearby] = useState(searchParams.get("nearby") === "1");
   const [pin, setPin] = useState<SavedPin | null>(() => getSavedPin());
   const [showPin, setShowPin] = useState(false);
   const [draft, setDraft] = useState(() => getSavedPin() || ADDIS_CENTER);
+
+  // When arriving via ?nearby=1 with no pin, immediately show the picker.
+  useEffect(() => {
+    if (searchParams.get("nearby") === "1" && !getSavedPin()) {
+      setShowPin(true);
+    }
+  }, [searchParams]);
 
   const fetchStores = async () => {
     setLoading(true);
@@ -47,11 +54,13 @@ const Stores = () => {
   const saveLocation = () => {
     savePin(draft);
     setPin(draft);
+    setNearby(true);
     setShowPin(false);
-    toast.success("Delivery location saved");
+    toast.success("Location saved — showing nearby stores");
   };
 
-  const displayed = nearby && pin ? sortStoresByDistance(stores, pin) : stores;
+  const displayed =
+    nearby && pin ? sortStoresByDistance(stores, pin) : stores;
 
   return (
     <div className="min-h-screen bg-app-cream">
@@ -62,7 +71,7 @@ const Stores = () => {
             <StoreIcon className="size-7" /> Browse stores
           </h1>
           <p className="text-sm text-app-text-light mt-1">
-            Stores near you across Addis Ababa
+            Stores across Addis Ababa
           </p>
         </div>
 
@@ -70,13 +79,27 @@ const Stores = () => {
         <div className="flex items-center gap-2 mb-6">
           <button
             onClick={() => setNearby(false)}
-            className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${!nearby ? "bg-app-green text-white" : "bg-white text-app-text-light border border-app-border"}`}
+            className={`px-4 py-2 text-sm font-medium rounded-full transition-colors ${
+              !nearby
+                ? "bg-app-green text-white"
+                : "bg-white text-app-text-light border border-app-border"
+            }`}
           >
             All stores
           </button>
           <button
-            onClick={() => setNearby(true)}
-            className={`px-4 py-2 text-sm font-medium rounded-full transition-colors flex items-center gap-1.5 ${nearby ? "bg-app-green text-white" : "bg-white text-app-text-light border border-app-border"}`}
+            onClick={() => {
+              if (!pin) {
+                setShowPin(true);
+              } else {
+                setNearby(true);
+              }
+            }}
+            className={`px-4 py-2 text-sm font-medium rounded-full transition-colors flex items-center gap-1.5 ${
+              nearby
+                ? "bg-app-green text-white"
+                : "bg-white text-app-text-light border border-app-border"
+            }`}
           >
             <NavigationIcon className="size-3.5" /> Nearby
           </button>
@@ -106,16 +129,21 @@ const Stores = () => {
 
         {/* Nearby prompt when no pin */}
         {nearby && !pin && (
-          <div className="rounded-2xl border border-dashed border-app-border bg-white px-5 py-8 text-center mb-8">
-            <NavigationIcon className="size-8 text-app-green/50 mx-auto mb-3" />
+          <div className="rounded-2xl border border-dashed border-app-border bg-white px-5 py-10 text-center mb-8">
+            <div className="size-14 rounded-2xl bg-app-green/10 flex-center mx-auto mb-3 text-app-green">
+              <NavigationIcon className="size-7" />
+            </div>
             <p className="text-sm font-semibold text-app-green">
-              Set your delivery location to see nearby stores.
+              Set your location pin to see nearby stores
+            </p>
+            <p className="text-xs text-app-text-light mt-1 mb-4">
+              We'll sort stores by distance from your chosen location.
             </p>
             <button
               onClick={() => setShowPin(true)}
-              className="mt-4 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-app-green text-white text-sm font-semibold hover:bg-app-green-light transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-app-green text-white text-sm font-semibold hover:bg-app-green-light transition-colors"
             >
-              <MapPinIcon className="size-4" /> Set delivery location
+              <MapPinIcon className="size-4" /> Set location pin
             </button>
           </div>
         )}
@@ -135,7 +163,11 @@ const Stores = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {displayed.map((store) => (
-              <StoreCard key={store.id} store={store} />
+              <StoreCard
+                key={store.id}
+                store={store}
+                pin={pin}
+              />
             ))}
           </div>
         )}
@@ -146,9 +178,14 @@ const Stores = () => {
         <div className="fixed inset-0 z-[100] bg-black/50 flex items-end sm:items-center justify-center p-0 sm:p-4">
           <div className="bg-white w-full sm:max-w-lg rounded-t-2xl sm:rounded-2xl overflow-hidden flex flex-col max-h-[92vh]">
             <div className="px-5 py-4 border-b border-app-border flex items-center justify-between">
-              <h3 className="font-semibold text-app-green">
-                Set delivery location
-              </h3>
+              <div>
+                <h3 className="font-semibold text-app-green">
+                  Set your location pin
+                </h3>
+                <p className="text-xs text-app-text-light mt-0.5">
+                  Stores will be sorted by distance from this pin.
+                </p>
+              </div>
               <button
                 onClick={() => setShowPin(false)}
                 className="p-1.5 rounded-lg hover:bg-app-cream transition-colors"
@@ -161,13 +198,13 @@ const Stores = () => {
                 lat={draft.lat}
                 lng={draft.lng}
                 onChange={(c) => setDraft(c)}
-                helperText="Set your delivery pin to sort stores by distance."
+                helperText="Drop a pin to discover stores near you."
               />
               <button
                 onClick={saveLocation}
                 className="mt-4 w-full py-3 bg-app-green text-white font-semibold rounded-xl hover:bg-app-green-light transition-colors"
               >
-                Save delivery location
+                Show nearby stores
               </button>
             </div>
           </div>

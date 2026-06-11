@@ -3,12 +3,12 @@ import { ChevronRightIcon, ShoppingBasketIcon, StoreIcon } from "lucide-react";
 
 import type { Store } from "../../types";
 import { formatCurrency } from "../../lib/format";
-import { sortStoresByDistance } from "../../lib/geo";
+import { sortStoresByDistance, type Coords } from "../../lib/geo";
 
 interface Props {
   stores: Store[];
   loading: boolean;
-  pin?: { lat: number; lng: number } | null;
+  pin?: Coords | null;
 }
 
 // Compact Instacart-style store logo grid: square logo tile, store name, a

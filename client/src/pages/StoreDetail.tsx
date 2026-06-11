@@ -16,6 +16,7 @@ import ProductCard from "../components/ProductCard";
 import Loading from "../components/Loading";
 import { getPublicStore, getPublicStoreProducts } from "../lib/db/stores";
 import { deliveryEstimate, formatCurrency, storeLocation } from "../lib/format";
+import { recordStoreView } from "../components/Home/PersonalizedSections";
 
 const StoreDetail = () => {
   const { id } = useParams();
@@ -35,6 +36,7 @@ const StoreDetail = () => {
         ]);
         setStore(storeData);
         setProducts(productsData);
+        if (storeData) recordStoreView(storeData.id);
       } catch (error: unknown) {
         toast.error(error instanceof Error ? error.message : "Failed to load store");
       } finally {
