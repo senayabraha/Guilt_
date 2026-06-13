@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import {
   AlertCircleIcon,
+  CircleIcon,
   NavigationIcon,
   PackageIcon,
   RefreshCwIcon,
@@ -12,7 +13,7 @@ import OtpModal from "../../components/Delivery/OtpModal";
 import CancelModal from "../../components/Delivery/CancelModal";
 import DeliveryOrderCard from "../../components/Delivery/DeliveryOrderCard";
 import Loading from "../../components/Loading";
-import type { DeliveryPartner, Order } from "../../types";
+import type { DeliveryPartner, DriverAvailabilityStatus, Order } from "../../types";
 import {
   getMyDeliveries,
   updateDeliveryLocation,
@@ -20,6 +21,7 @@ import {
   markDeliveryPickedUp,
   markDeliveryOutForDelivery,
   cancelDelivery,
+  updateDriverAvailability,
 } from "../../lib/db/deliveryPartners";
 
 const STATUS_PRIORITY: Record<string, number> = {
@@ -47,6 +49,10 @@ export default function DeliveryDashboard() {
   const [lastLocationUpdate, setLastLocationUpdate] = useState<Date | null>(
     null,
   );
+  const [availability, setAvailability] = useState<DriverAvailabilityStatus>(
+    partner.availabilityStatus,
+  );
+  const [togglingAvail, setTogglingAvail] = useState(false);
 
   const [otpModal, setOtpModal] = useState<string | null>(null);
   const [otp, setOtp] = useState("");
@@ -172,49 +178,119 @@ export default function DeliveryDashboard() {
     ["Picked Up", "Out for Delivery"].includes(o.status),
   );
 
+  const handleToggleAvailability = async () => {
+    const next: DriverAvailabilityStatus =
+      availability === "online" ? "offline" : "online";
+    setTogglingAvail(true);
+    try {
+      await updateDriverAvailability(next);
+      setAvailability(next);
+      toast.success(next === "online" ? "You are now online" : "You are now offline");
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to update availability");
+    } finally {
+      setTogglingAvail(false);
+    }
+  };
+
+  const AVAIL_DOT: Record<DriverAvailabilityStatus, string> = {
+    online: "bg-green-500",
+    busy: "bg-amber-500",
+    unavailable: "bg-red-500",
+    offline: "bg-zinc-400",
+  };
+  const AVAIL_LABEL: Record<DriverAvailabilityStatus, string> = {
+    online: "Online",
+    busy: "Busy",
+    unavailable: "Unavailable",
+    offline: "Offline",
+  };
+
   return (
     <div className="space-y-5">
       {/* Driver status header */}
-      <div className="bg-white rounded-2xl border border-app-border px-5 py-4 flex items-center justify-between gap-4">
-        <div>
-          <p className="text-xs text-zinc-500 font-medium uppercase tracking-wide">
-            Welcome back
-          </p>
-          <p className="text-base font-semibold text-zinc-900 mt-0.5">
-            {partner.name}
-          </p>
-          {tab === "active" && orders.length > 0 && (
-            <p className="text-xs text-zinc-500 mt-1">
-              {orders.length} active assignment
-              {orders.length !== 1 ? "s" : ""}
+      <div className="bg-white rounded-2xl border border-app-border overflow-hidden">
+        {/* Row 1: name + location toggle */}
+        <div className="px-5 py-4 flex items-center justify-between gap-4">
+          <div>
+            <p className="text-xs text-zinc-500 font-medium uppercase tracking-wide">
+              Welcome back
             </p>
+            <p className="text-base font-semibold text-zinc-900 mt-0.5">
+              {partner.name}
+            </p>
+            {tab === "active" && orders.length > 0 && (
+              <p className="text-xs text-zinc-500 mt-1">
+                {orders.length} active assignment
+                {orders.length !== 1 ? "s" : ""}
+              </p>
+            )}
+          </div>
+          <button
+            onClick={() => {
+              if (!hasTrackableOrders && !tracking) {
+                toast(
+                  "Location sharing activates when orders reach Picked Up or Out for Delivery.",
+                  { icon: "ℹ️" },
+                );
+              }
+              setTracking((prev) => !prev);
+            }}
+            className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
+              tracking
+                ? "bg-green-600 text-white"
+                : "bg-white border border-app-border text-zinc-600 hover:bg-app-cream"
+            }`}
+          >
+            <NavigationIcon
+              className={`w-3.5 h-3.5 ${tracking ? "animate-pulse" : ""}`}
+            />
+            {tracking
+              ? lastLocationUpdate
+                ? "Live"
+                : "Locating…"
+              : "Location"}
+          </button>
+        </div>
+
+        {/* Row 2: availability toggle — clearly separate from location */}
+        <div className="px-5 py-3 border-t border-app-border bg-zinc-50/60 flex items-center justify-between gap-3">
+          <div className="flex items-center gap-2">
+            <span
+              className={`size-2.5 rounded-full ${AVAIL_DOT[availability]}`}
+            />
+            <span className="text-sm font-medium text-zinc-700">
+              {AVAIL_LABEL[availability]}
+            </span>
+            {availability === "busy" && (
+              <span className="text-xs text-zinc-500">(active delivery)</span>
+            )}
+          </div>
+          {availability === "busy" || availability === "unavailable" ? (
+            <span className="text-xs text-zinc-400 italic">
+              {availability === "busy"
+                ? "Set automatically during delivery"
+                : "Contact admin"}
+            </span>
+          ) : (
+            <button
+              onClick={handleToggleAvailability}
+              disabled={togglingAvail}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg transition-colors disabled:opacity-50 ${
+                availability === "online"
+                  ? "bg-zinc-200 text-zinc-700 hover:bg-zinc-300"
+                  : "bg-app-green text-white hover:bg-app-green/90"
+              }`}
+            >
+              <CircleIcon className="size-2.5 fill-current" />
+              {togglingAvail
+                ? "Updating…"
+                : availability === "online"
+                  ? "Go Offline"
+                  : "Go Online"}
+            </button>
           )}
         </div>
-        <button
-          onClick={() => {
-            if (!hasTrackableOrders && !tracking) {
-              toast(
-                "Location sharing activates when orders reach Picked Up or Out for Delivery.",
-                { icon: "ℹ️" },
-              );
-            }
-            setTracking((prev) => !prev);
-          }}
-          className={`shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
-            tracking
-              ? "bg-green-600 text-white"
-              : "bg-white border border-app-border text-zinc-600 hover:bg-app-cream"
-          }`}
-        >
-          <NavigationIcon
-            className={`w-3.5 h-3.5 ${tracking ? "animate-pulse" : ""}`}
-          />
-          {tracking
-            ? lastLocationUpdate
-              ? "Live"
-              : "Locating…"
-            : "Location"}
-        </button>
       </div>
 
       {/* Tabs */}

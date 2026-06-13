@@ -1157,3 +1157,54 @@ end;
 $$;
 
 grant execute on function public.driver_report_failed_delivery(uuid, text) to authenticated;
+
+-- ============================================================
+-- MIGRATION: driver_availability (20260613000000)
+-- ============================================================
+alter table public.delivery_partners
+  add column if not exists availability_status text not null default 'offline'
+    check (availability_status in ('offline', 'online', 'busy', 'unavailable')),
+  add column if not exists last_seen_at      timestamptz,
+  add column if not exists last_available_at timestamptz;
+
+-- security-definer RPC so drivers can update only their own
+-- availability fields without touching is_active or any other
+-- admin-managed column.
+create or replace function public.set_driver_availability(new_status text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  dp public.delivery_partners%rowtype;
+begin
+  select * into dp
+  from public.delivery_partners
+  where auth_user_id = auth.uid();
+
+  if dp.id is null then
+    raise exception 'Delivery partner record not found for this user';
+  end if;
+
+  if not dp.is_active then
+    raise exception 'Your account is inactive. Contact admin to reactivate.';
+  end if;
+
+  if new_status not in ('offline', 'online', 'busy', 'unavailable') then
+    raise exception 'Invalid availability status: %', new_status;
+  end if;
+
+  update public.delivery_partners
+  set
+    availability_status = new_status,
+    last_seen_at        = now(),
+    last_available_at   = case
+                            when new_status = 'online' then now()
+                            else last_available_at
+                          end
+  where id = dp.id;
+end;
+$$;
+
+grant execute on function public.set_driver_availability(text) to authenticated;

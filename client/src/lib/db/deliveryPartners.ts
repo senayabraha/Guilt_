@@ -116,6 +116,17 @@ export async function cancelDelivery(
   );
 }
 
+// --- Driver availability ---
+
+export async function updateDriverAvailability(
+  status: "offline" | "online" | "busy" | "unavailable",
+): Promise<void> {
+  const { error } = await supabase.rpc("set_driver_availability", {
+    new_status: status,
+  });
+  if (error) throw error;
+}
+
 // --- Admin management ---
 
 export async function getAllPartners(): Promise<DeliveryPartner[]> {

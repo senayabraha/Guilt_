@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { PlusIcon, XIcon, TruckIcon, PhoneIcon, MailIcon } from "lucide-react";
 import toast from "react-hot-toast";
 
-import type { DeliveryPartner } from "../../types";
+import type { DeliveryPartner, DriverAvailabilityStatus } from "../../types";
 import Loading from "../../components/Loading";
 import {
   getAllPartners,
@@ -69,6 +69,19 @@ export default function AdminDeliveryPartners() {
     }
   };
 
+  const AVAIL_DOT: Record<DriverAvailabilityStatus, string> = {
+    online: "bg-green-500",
+    busy: "bg-amber-500",
+    unavailable: "bg-red-400",
+    offline: "bg-zinc-400",
+  };
+  const AVAIL_LABEL: Record<DriverAvailabilityStatus, string> = {
+    online: "Online",
+    busy: "Busy",
+    unavailable: "Unavailable",
+    offline: "Offline",
+  };
+
   if (loading) return <Loading />;
 
   return (
@@ -119,11 +132,19 @@ export default function AdminDeliveryPartners() {
                     </p>
                   </div>
                 </div>
-                <span
-                  className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${p.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
-                >
-                  {p.isActive ? "Active" : "Inactive"}
-                </span>
+                <div className="flex flex-col items-end gap-1.5">
+                  <span
+                    className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${p.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                  >
+                    {p.isActive ? "Active" : "Inactive"}
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-500">
+                    <span
+                      className={`size-1.5 rounded-full ${AVAIL_DOT[p.availabilityStatus]}`}
+                    />
+                    {AVAIL_LABEL[p.availabilityStatus]}
+                  </span>
+                </div>
               </div>
               <div className="space-y-1.5 text-sm text-zinc-600">
                 <p className="flex items-center gap-2">

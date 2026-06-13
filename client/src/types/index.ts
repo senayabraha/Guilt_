@@ -106,6 +106,8 @@ export interface OrderItem {
   preparedAt?: string | null;
 }
 
+export type DriverAvailabilityStatus = "offline" | "online" | "busy" | "unavailable";
+
 export interface DeliveryPartner {
   _id: string;
   id?: string;
@@ -115,6 +117,9 @@ export interface DeliveryPartner {
   avatar: string;
   vehicleType: "bike" | "scooter" | "car";
   isActive: boolean;
+  availabilityStatus: DriverAvailabilityStatus;
+  lastSeenAt?: string | null;
+  lastAvailableAt?: string | null;
   createdAt: string;
 }
 

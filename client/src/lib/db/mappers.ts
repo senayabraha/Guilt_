@@ -221,6 +221,9 @@ export function mapDeliveryPartner(row: any): DeliveryPartner {
     avatar: row.avatar ?? "",
     vehicleType: row.vehicle_type ?? "bike",
     isActive: row.is_active ?? true,
+    availabilityStatus: row.availability_status ?? "offline",
+    lastSeenAt: row.last_seen_at ?? null,
+    lastAvailableAt: row.last_available_at ?? null,
     createdAt: row.created_at,
   } as DeliveryPartner;
 }
