@@ -119,224 +119,30 @@ The vendor flow includes onboarding, store setup, product creation, product imag
 
 Make vendor work operationally efficient:
 
-1. Separate onboarding and approved-dashboard states.
-2. Split product creation into sections.
-3. Add product preview.
-4. Add low-stock and inventory workflows.
-5. Add vendor notifications.
-6. Complete item-unavailable workflows with customer approval, refunds, or substitutions.
+## Part 5: Delivery Driver / Delivery Partner Flow Analysis
 
-## Part 5: UI/UX and Information Display Review
+A deeper delivery-driver investigation is documented in [`docs/delivery-driver-system-analysis.md`](delivery-driver-system-analysis.md).
 
-### What this part means
+### What already works
 
-The current interface has a strong marketplace foundation, but information hierarchy and mobile navigation should become more buyer- and vendor-focused.
-
-### What works
-
-- Public navigation includes Home, Products, Stores, and Deals.
-- Search and cart are visible in the main navigation.
-- Account menu exposes orders, addresses, vendor entry, and admin entry where appropriate.
-- The brand palette is coherent: deep green, fresh green, orange, and cream.
-- Rounded cards, soft backgrounds, product modal polish, and vendor stat cards create a consistent look.
+- Dedicated delivery login and dashboard routes exist at `/delivery/login` and `/delivery`.
+- Delivery partners are stored in `delivery_partners` and linked to Supabase Auth through `auth_user_id`.
+- Admins can create delivery partners through the `admin-create-delivery-partner` Supabase Edge Function.
+- Admins can activate/deactivate delivery partners and assign partners to orders.
+- Drivers can see assigned active/completed deliveries, pickup/drop-off details, map links, and customer/store contact information.
+- Drivers can share live location into `orders.live_location`.
+- Customers can view live delivery location through order tracking.
+- OTP-based delivery completion exists through the `complete_delivery` RPC.
 
 ### Main gaps
 
-- Mobile search is not prominent enough.
-- Customer, vendor, and admin destinations are mixed together in the account menu.
-- Vendor navigation should feel more like an operational dashboard.
-- Product cards should show more trust signals.
-- Checkout forms need clearer labels and field structure.
-- Vendor/admin tables should be tested and improved for mobile.
-- Empty, loading, error, and accessibility states should be standardized.
+- Delivery partners are not represented in the `profiles.role` enum; current user roles are `CUSTOMER`, `VENDOR`, and `ADMIN`.
+- Driver availability, online/offline state, request queue, accept/reject, and automatic dispatch are missing.
+- Vendor-side driver dispatch is missing; vendors prepare orders, but admins assign drivers.
+- Order status and delivery status are mixed in `orders.status`.
+- Driver pickup/progress/cancel actions still rely partly on generic order status updates instead of dedicated server-side transition RPCs.
+- Driver earnings, proof of delivery, failed-delivery flow, ratings, and performance metrics are missing.
 
 ### Recommended direction
 
-Use role-specific navigation:
-
-- Customer mobile tabs: Home, Search, Stores, Cart, Account.
-- Vendor navigation: Dashboard, Orders, Products, Inventory, Store Settings.
-- Admin navigation: Dashboard, Stores, Products, Orders, Delivery, Users, Reports.
-
-## Part 6: Feature Gap Analysis
-
-### What this part means
-
-This part turns observations into a prioritized feature backlog.
-
-### Critical work
-
-- Unified cart/order totals.
-- Proper checkout contact and address fields.
-- Complete unavailable-item workflows for refunds, substitutions, and customer approval.
-
-### High-priority work
-
-- Favorites/saved items.
-- Ratings and reviews.
-- Delivery ETA and store preparation time.
-- Store profile improvements.
-- Customer support/order help.
-- Notifications.
-- Store hours.
-
-### Medium-priority work
-
-- Product variants/options.
-- Structured specifications.
-- Bulk product upload/edit.
-- Low-stock alerts.
-- Sales analytics.
-- Delivery/pickup selector.
-- Admin user management.
-
-### Low/future work
-
-- Promotions and featured products.
-- Loyalty/referrals.
-- Reorder previous orders.
-- Delivery live-map polish.
-
-## Part 7: Technical and Database Review
-
-### What this part means
-
-The current Supabase schema is strong enough for an MVP but should become more normalized as the marketplace grows.
-
-### Current core data model
-
-The core data model includes:
-
-- `profiles`
-- `addresses`
-- `stores`
-- `products`
-- `delivery_partners`
-- `orders`
-
-### Current product model
-
-Products already support store ownership, name, description, multiple image URLs, specifications, price, original price, legacy primary image, category, unit, stock, organic flag, active flag, rating, and review count.
-
-For scale, product images should eventually move from a text array to a `product_images` table with sort order, primary flag, alt text, and metadata.
-
-### Current order model
-
-Orders currently store items and status history as JSONB. This is acceptable for MVP speed, but normalized `order_items`, `order_status_events`, `order_adjustments`, and refund/substitution tables will make reporting, item-level preparation, refunds, and analytics easier.
-
-### Security understanding
-
-RLS protects backend data, but frontend route protection still matters because logged-out users should be redirected before they reach checkout, orders, tracking, or address screens. The customer route guard now handles this redirect while preserving the requested URL for post-login return.
-
-### Recommended direction
-
-- Keep `ProtectedRoute` enforced for checkout, orders, order tracking, and addresses.
-- Add a `preview_order` RPC or equivalent shared totals source.
-- Normalize order/product image data when operational complexity increases.
-- Add check constraints or RPC-controlled transitions for order statuses.
-- Add notifications and reviews as first-class tables.
-
-## Part 8: Recommended Improved Flows
-
-### Customer flow
-
-The improved customer flow should be:
-
-1. Open app.
-2. Select delivery location.
-3. Browse nearby/open stores and categories.
-4. Search/filter products and stores.
-5. Open product detail modal.
-6. Review images, description, specs, store, ETA, and reviews.
-7. Add to cart without interrupting shopping.
-8. Continue shopping.
-9. Open cart manually.
-10. Review store name, delivery fee, minimum order, ETA, and quantities.
-11. Checkout with clean contact/address/payment fields.
-12. Review final total from server preview.
-13. Place order.
-14. Track order status.
-15. Receive notifications.
-16. Contact support or reorder later.
-
-### Vendor flow
-
-The improved vendor flow should be:
-
-1. Log in as vendor.
-2. Complete store profile.
-3. View approval status.
-4. Enter dashboard after approval.
-5. Add product through a sectioned form.
-6. Upload and order images.
-7. Add structured details/specifications.
-8. Preview and publish product.
-9. Manage inventory and availability.
-10. Receive new-order notifications.
-11. Prepare orders with item-level states.
-12. Trigger substitution/refund/customer approval when an item is unavailable.
-13. Mark orders ready.
-14. Review analytics and low-stock alerts.
-
-## Part 9: Prioritized Action Plan
-
-### Phase 1: Critical hardening
-
-1. Keep auth checks verified for protected customer routes.
-2. Clean up checkout contact/address data modeling.
-3. Align cart, checkout, and final order totals with a single pricing source.
-4. Define the first version of unavailable-item order adjustments.
-
-### Phase 2: Trust and conversion
-
-1. Add mobile search access.
-2. Add store name, low-stock signals, ETA, and favorites to product cards.
-3. Add store link, policy, ETA, and review areas to product detail.
-4. Add store hours and closed-state logic.
-5. Add customer support entry points on order screens.
-
-### Phase 3: Vendor operations
-
-1. Add vendor onboarding/status screens.
-2. Improve low-stock lists and restock actions.
-3. Add notifications for vendors and customers.
-4. Add structured product specs.
-5. Add basic analytics and time filters.
-
-### Phase 4: Marketplace scale
-
-1. Add reviews and rating aggregation.
-2. Add normalized order items.
-3. Add product image metadata table.
-4. Add product variants.
-5. Add promotions, bulk upload, loyalty, and advanced delivery tooling.
-
-## Part 10: QA Checklist
-
-### What this part means
-
-The QA checklist is a practical acceptance-test guide. It should be used before release and after major changes to confirm that customer, vendor, admin, security, and mobile flows still work.
-
-### Key QA groups
-
-- Customer browsing: home, search, filters, sorting, empty states.
-- Product detail: modal, image carousel, stock, quantity, fallback content.
-- Add-to-cart: quick add, toast, count, one-store rule, cart controls.
-- Checkout: auth redirect, empty cart, address/contact, payment, review, order placement, stock decrement.
-- Order tracking: timeline, store, delivery partner, OTP visibility, live-location fallback.
-- Vendor onboarding/store: application, pending/approved/suspended states, settings.
-- Vendor products: approved-store selection, images, primary image, description, specifications, visibility, edit behavior.
-- Vendor orders: filtering, preparation, unavailable reasons, ready state, customer status updates.
-- Admin: authorization, store approval/suspension, products, orders, delivery partner management.
-- Security/RLS: users can only access the data their role permits.
-- Mobile: product grid, cart, modal, checkout, vendor tables, navbar search, tap targets, keyboard safety.
-
-## Bottom Line
-
-Zembil Market already contains many important marketplace features. The best next move is to strengthen the existing foundation:
-
-1. Keep protected routing covered by auth checks and regression QA.
-2. Make checkout and totals reliable.
-3. Improve trust signals on product, store, and order screens.
-4. Add vendor notifications and order-adjustment workflows.
-5. Normalize marketplace data as order volume and operational complexity grow.
+Harden the current admin-assigned delivery flow first, then add driver availability, request/accept/reject dispatch, active delivery UX, realtime notifications, privacy-safe tracking, and finally earnings/history/performance.
