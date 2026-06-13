@@ -10,8 +10,6 @@ import {
 } from "lucide-react";
 import toast from "react-hot-toast";
 
-import OtpModal from "../../components/Delivery/OtpModal";
-import CancelModal from "../../components/Delivery/CancelModal";
 import DeliveryOrderCard from "../../components/Delivery/DeliveryOrderCard";
 import IncomingRequestCard from "../../components/Delivery/IncomingRequestCard";
 import RejectRequestModal from "../../components/Delivery/RejectRequestModal";
@@ -25,10 +23,6 @@ import type {
 import {
   getMyDeliveries,
   updateDeliveryLocation,
-  completeDelivery,
-  markDeliveryPickedUp,
-  markDeliveryOutForDelivery,
-  cancelDelivery,
   updateDriverAvailability,
 } from "../../lib/db/deliveryPartners";
 import {
@@ -79,13 +73,6 @@ export default function DeliveryDashboard() {
   const [actioningRequest, setActioningRequest] = useState<string | null>(null);
   const [rejectTarget, setRejectTarget] = useState<string | null>(null);
   const [rejectingRequest, setRejectingRequest] = useState(false);
-
-  // ── Active delivery modals ───────────────────────────────────
-  const [otpModal, setOtpModal] = useState<string | null>(null);
-  const [otp, setOtp] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [cancelModal, setCancelModal] = useState<string | null>(null);
-  const [cancelReason, setCancelReason] = useState("");
 
   // ── Data fetching ────────────────────────────────────────────
   const fetchOrders = async () => {
@@ -195,59 +182,6 @@ export default function DeliveryDashboard() {
       clearInterval(interval);
     };
   }, [orders, tracking]);
-
-  // ── Active delivery handlers ─────────────────────────────────
-  const handleMarkPickedUp = async (orderId: string) => {
-    try {
-      await markDeliveryPickedUp(orderId);
-      toast.success("Order picked up");
-      fetchOrders();
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to mark as picked up");
-    }
-  };
-
-  const handleMarkOutForDelivery = async (orderId: string) => {
-    try {
-      await markDeliveryOutForDelivery(orderId);
-      toast.success("Out for delivery");
-      fetchOrders();
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to update status");
-    }
-  };
-
-  const handleComplete = async () => {
-    if (!otpModal || !otp) return;
-    setSubmitting(true);
-    try {
-      await completeDelivery(otpModal, otp);
-      toast.success("Delivery completed!");
-      setOtpModal(null);
-      setOtp("");
-      fetchOrders();
-    } catch (err: any) {
-      toast.error(err?.message || "Invalid OTP");
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  const handleCancel = async () => {
-    if (!cancelModal) return;
-    setSubmitting(true);
-    try {
-      await cancelDelivery(cancelModal, cancelReason);
-      toast.success("Delivery cancelled");
-      setCancelModal(null);
-      setCancelReason("");
-      fetchOrders();
-    } catch (err: any) {
-      toast.error(err?.message || "Failed to cancel delivery");
-    } finally {
-      setSubmitting(false);
-    }
-  };
 
   // ── Incoming request handlers ────────────────────────────────
   const handleAcceptRequest = async (requestId: string) => {
@@ -497,34 +431,12 @@ export default function DeliveryDashboard() {
               order={order}
               tab={tab}
               isPriority={tab === "active" && idx === 0}
-              onMarkPickedUp={handleMarkPickedUp}
-              onMarkOutForDelivery={handleMarkOutForDelivery}
-              setOtpModal={setOtpModal}
-              setCancelModal={setCancelModal}
             />
           ))}
         </div>
       )}
 
       {/* ── Modals ────────────────────────────────────────────── */}
-      {otpModal && (
-        <OtpModal
-          setOtpModal={setOtpModal}
-          otp={otp}
-          setOtp={setOtp}
-          handleComplete={handleComplete}
-          submitting={submitting}
-        />
-      )}
-      {cancelModal && (
-        <CancelModal
-          setCancelModal={setCancelModal}
-          cancelReason={cancelReason}
-          setCancelReason={setCancelReason}
-          handleCancel={handleCancel}
-          submitting={submitting}
-        />
-      )}
       {rejectTarget && (
         <RejectRequestModal
           onClose={() => setRejectTarget(null)}

@@ -1,13 +1,5 @@
-import {
-  AlertTriangleIcon,
-  CheckCircleIcon,
-  ClockIcon,
-  ExternalLinkIcon,
-  MapPinIcon,
-  PhoneIcon,
-  StoreIcon,
-  TruckIcon,
-} from "lucide-react";
+import { ClockIcon, MapPinIcon, PackageIcon, StoreIcon } from "lucide-react";
+import { Link } from "react-router-dom";
 import type { Order } from "../../types";
 import { statusColors } from "../../assets/assets";
 import { formatCurrency } from "../../lib/format";
@@ -42,51 +34,23 @@ interface DeliveryOrderCardProps {
   order: Order;
   tab: "active" | "completed";
   isPriority?: boolean;
-  onMarkPickedUp: (orderId: string) => void;
-  onMarkOutForDelivery: (orderId: string) => void;
-  setOtpModal: (orderId: string) => void;
-  setCancelModal: (orderId: string) => void;
 }
 
 export default function DeliveryOrderCard({
   order,
   tab,
   isPriority,
-  onMarkPickedUp,
-  onMarkOutForDelivery,
-  setOtpModal,
-  setCancelModal,
 }: DeliveryOrderCardProps) {
-  const user =
-    typeof order.user === "object"
-      ? order.user
-      : { name: "Customer", email: "", phone: "" };
-
   const store = order.store;
   const ship = (order.shippingAddress as any) || {};
-
-  const hasStorePin =
-    !!store &&
-    !!store.lat &&
-    !!store.lng &&
-    !(store.lat === 0 && store.lng === 0);
-  const hasDropPin =
-    !!ship.lat && !!ship.lng && !(ship.lat === 0 && ship.lng === 0);
-
-  const dropName = ship.fullName || user.name;
-  const dropPhone = ship.phone || (user as any).phone;
   const dropArea = ship.area || ship.state;
-  const dropInstructions = ship.instructions || ship.address;
-
   const orderId = order.id || order._id;
   const context = STATUS_CONTEXT[order.status];
 
-  return (
+  const inner = (
     <div className="bg-white rounded-2xl border border-app-border overflow-hidden">
-      {/* Priority stripe — top card only */}
-      {isPriority && tab === "active" && (
-        <div className="h-1 bg-app-green" />
-      )}
+      {/* Priority stripe */}
+      {isPriority && tab === "active" && <div className="h-1 bg-app-green" />}
 
       {/* Header */}
       <div className="px-5 py-4 border-b border-app-border flex items-center justify-between">
@@ -114,149 +78,45 @@ export default function DeliveryOrderCard({
         </div>
       )}
 
-      {/* Body */}
-      <div className="px-5 py-4 space-y-4">
-        {/* Pickup */}
+      {/* Route summary */}
+      <div className="px-5 py-4 space-y-2.5">
         {store && (
-          <div className="space-y-1.5 text-sm text-zinc-600">
-            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-app-green">
-              <StoreIcon className="size-3.5" /> Pickup
-            </p>
-            <p className="font-medium text-zinc-900">{store.name}</p>
-            {store.phone && (
-              <a
-                href={`tel:${store.phone}`}
-                className="flex items-center gap-1 text-xs text-zinc-500 hover:text-app-green"
-              >
-                <PhoneIcon className="size-3" /> {store.phone}
-              </a>
-            )}
-            {(store.state || store.city) && (
-              <p className="text-sm">
-                {store.state}
-                {store.state && store.city ? ", " : ""}
-                {store.city}
-              </p>
-            )}
-            {store.address && <p className="text-sm">{store.address}</p>}
-            {hasStorePin && (
-              <a
-                href={`https://www.google.com/maps?q=${store.lat},${store.lng}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-medium text-app-green hover:underline"
-              >
-                <ExternalLinkIcon className="size-3" /> Open in Google Maps
-              </a>
-            )}
+          <div className="flex items-center gap-2 text-sm text-zinc-700">
+            <StoreIcon className="size-3.5 text-app-green shrink-0" />
+            <span className="font-medium truncate">{store.name}</span>
+          </div>
+        )}
+        {store && dropArea && (
+          <div className="ml-3.5 w-px h-3 border-l-2 border-dashed border-zinc-200" />
+        )}
+        {dropArea && (
+          <div className="flex items-center gap-2 text-sm text-zinc-700">
+            <MapPinIcon className="size-3.5 text-blue-500 shrink-0" />
+            <span className="truncate">{dropArea}</span>
           </div>
         )}
 
-        {/* Dashed divider between pickup and dropoff */}
-        {store && <div className="border-t border-dashed border-app-border" />}
-
-        {/* Dropoff */}
-        <div className="space-y-1.5 text-sm text-zinc-600">
-          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-app-green">
-            <MapPinIcon className="size-3.5" /> Dropoff
-          </p>
-          {dropName && (
-            <p className="font-medium text-zinc-900">{dropName}</p>
-          )}
-          {dropPhone && (
-            <a
-              href={`tel:${dropPhone}`}
-              className="flex items-center gap-1 text-xs text-zinc-500 hover:text-app-green"
-            >
-              <PhoneIcon className="size-3" /> {dropPhone}
-            </a>
-          )}
-          {dropArea && <p className="text-sm">{dropArea}</p>}
-          {dropInstructions && (
-            <p className="text-sm">{dropInstructions}</p>
-          )}
-          {hasDropPin && (
-            <a
-              href={`https://www.google.com/maps?q=${ship.lat},${ship.lng}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-medium text-app-green hover:underline"
-            >
-              <ExternalLinkIcon className="size-3" /> Open in Google Maps
-            </a>
-          )}
+        {/* Meta */}
+        <div className="flex items-center gap-1.5 pt-1">
+          <PackageIcon className="size-3 text-zinc-400 shrink-0" />
+          <span className="text-xs text-zinc-400">
+            {order.items.length} item{order.items.length !== 1 ? "s" : ""}
+          </span>
+          <span className="text-zinc-300">·</span>
+          <span className="text-xs text-zinc-400">
+            {order.paymentMethod.toUpperCase()}
+          </span>
         </div>
-
-        {/* Order meta */}
-        <p className="text-xs text-zinc-400">
-          {order.items.length} item{order.items.length !== 1 ? "s" : ""} •{" "}
-          {order.paymentMethod.toUpperCase()}
-        </p>
       </div>
 
-      {/* Active actions */}
-      {tab === "active" && (
-        <div className="border-t border-app-border">
-          {/* Primary action */}
-          {(order.status === "Ready for Pickup" ||
-            order.status === "Picked Up" ||
-            order.status === "Out for Delivery") && (
-            <div className="px-5 py-3">
-              {order.status === "Ready for Pickup" && (
-                <button
-                  onClick={() => onMarkPickedUp(orderId)}
-                  className="w-full py-3 text-sm font-semibold bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
-                >
-                  <TruckIcon className="size-4" />
-                  Confirm Pickup
-                </button>
-              )}
-              {order.status === "Picked Up" && (
-                <button
-                  onClick={() => onMarkOutForDelivery(orderId)}
-                  className="w-full py-3 text-sm font-semibold bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors flex items-center justify-center gap-2"
-                >
-                  <TruckIcon className="size-4" />
-                  Start Delivery
-                </button>
-              )}
-              {order.status === "Out for Delivery" && (
-                <button
-                  onClick={() => setOtpModal(orderId)}
-                  className="w-full py-3 text-sm font-semibold bg-green-600 text-white rounded-xl hover:bg-green-700 transition-colors flex items-center justify-center gap-2"
-                >
-                  <CheckCircleIcon className="size-4" />
-                  Enter OTP & Complete
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Cancel zone — separated with dashed divider */}
-          {!["Delivered", "Cancelled"].includes(order.status) && (
-            <div
-              className={`px-5 pb-3 ${
-                order.status === "Ready for Pickup" ||
-                order.status === "Picked Up" ||
-                order.status === "Out for Delivery"
-                  ? "border-t border-dashed border-app-border pt-3"
-                  : "pt-3"
-              }`}
-            >
-              <button
-                onClick={() => setCancelModal(orderId)}
-                className="w-full py-2.5 text-sm font-medium text-red-600 border border-red-200 rounded-xl hover:bg-red-50 transition-colors flex items-center justify-center gap-1.5"
-              >
-                <AlertTriangleIcon className="size-3.5" />
-                Report Issue / Cancel
-              </button>
-            </div>
-          )}
+      {/* Footer */}
+      {tab === "active" ? (
+        <div className="px-5 py-3 border-t border-app-border bg-zinc-50/60 flex items-center justify-end">
+          <span className="text-xs font-semibold text-app-green">
+            View Details →
+          </span>
         </div>
-      )}
-
-      {/* Completed footer */}
-      {tab === "completed" && (
+      ) : (
         <div className="px-5 py-3 border-t border-app-border flex items-center justify-between">
           <p className="text-xs text-zinc-500 flex items-center gap-1">
             <ClockIcon className="size-3" />
@@ -279,4 +139,14 @@ export default function DeliveryOrderCard({
       )}
     </div>
   );
+
+  if (tab === "active") {
+    return (
+      <Link to={`/delivery/orders/${orderId}`} className="block">
+        {inner}
+      </Link>
+    );
+  }
+
+  return inner;
 }
