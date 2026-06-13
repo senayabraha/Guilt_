@@ -33,6 +33,7 @@ export default function OtpModal({
             value={otp}
             onChange={(e) => setOtp(e.target.value.replace(/\D/g, ""))}
             placeholder="000000"
+            autoFocus
             className="w-full px-4 py-3 text-center text-2xl font-mono tracking-[0.5em] rounded-xl border border-app-border focus:border-app-green outline-none mb-4"
           />
           <div className="flex gap-2">

@@ -172,3 +172,14 @@ export async function setStoreStatus(
 export async function updateAdminStore(id: string, form: any): Promise<Store> {
   return updateMyStore(id, form);
 }
+
+export async function setSelfDeliveryEnabled(
+  storeId: string,
+  enabled: boolean,
+): Promise<void> {
+  const { error } = await supabase.rpc("set_store_self_delivery", {
+    store_uuid: storeId,
+    enabled,
+  });
+  if (error) throw error;
+}

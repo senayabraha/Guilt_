@@ -18,6 +18,7 @@ export interface Store {
   categories: string[];
   status: StoreStatus;
   isOpen: boolean;
+  selfDeliveryEnabled?: boolean;
   deliveryRadius?: number;
   deliveryFee?: number;
   minOrder?: number;
@@ -106,6 +107,39 @@ export interface OrderItem {
   preparedAt?: string | null;
 }
 
+export type DriverAvailabilityStatus = "offline" | "online" | "busy" | "unavailable";
+
+export type DeliveryRequestStatus =
+  | "pending"
+  | "accepted"
+  | "rejected"
+  | "expired"
+  | "cancelled";
+
+export interface DeliveryRequestSnapshot {
+  storeId: string;
+  storeName: string;
+  storeAddress: string;
+  itemCount: number;
+  total: number;
+  deliveryArea: string;
+}
+
+export interface DeliveryRequest {
+  id: string;
+  orderId: string;
+  deliveryPartnerId: string | null;
+  requestedBy: string | null;
+  requestedByRole: "ADMIN" | "VENDOR";
+  status: DeliveryRequestStatus;
+  rejectReason: string | null;
+  orderSnapshot: DeliveryRequestSnapshot | null;
+  expiresAt: string | null;
+  respondedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DeliveryPartner {
   _id: string;
   id?: string;
@@ -115,6 +149,11 @@ export interface DeliveryPartner {
   avatar: string;
   vehicleType: "bike" | "scooter" | "car";
   isActive: boolean;
+  availabilityStatus: DriverAvailabilityStatus;
+  partnerType: "marketplace" | "store_owned";
+  storeId?: string | null;
+  lastSeenAt?: string | null;
+  lastAvailableAt?: string | null;
   createdAt: string;
 }
 
@@ -132,7 +171,7 @@ export interface Order {
   tax: number;
   total: number;
   status: string;
-  statusHistory: { status: string; timestamp: string; note: string }[];
+  statusHistory: { status: string; timestamp: string; note: string; actor?: string }[];
   deliveryPartner: DeliveryPartner | null;
   deliveryOtp: string;
   isPaid: boolean;

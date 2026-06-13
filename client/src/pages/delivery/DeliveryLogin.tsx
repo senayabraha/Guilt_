@@ -31,6 +31,13 @@ export default function DeliveryLogin() {
         toast.error("This account is not a delivery partner");
         return;
       }
+      if (!partner.isActive) {
+        await supabase.auth.signOut();
+        toast.error(
+          "Your delivery partner account is inactive. Please contact admin support.",
+        );
+        return;
+      }
       toast.success("Login successful");
       navigate("/delivery");
     } catch (error: any) {
@@ -43,7 +50,7 @@ export default function DeliveryLogin() {
   useEffect(() => {
     getMyPartner()
       .then((p) => {
-        if (p) navigate("/delivery");
+        if (p?.isActive) navigate("/delivery");
       })
       .catch(() => {});
   }, [navigate]);

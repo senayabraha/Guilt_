@@ -958,3 +958,828 @@ begin
   return new_order_id;
 end;
 $$;
+
+-- ============================================================
+-- Driver status-transition RPCs
+-- Each function follows the same security pattern as
+-- complete_delivery: security definer, explicit caller-is-
+-- assigned-partner check, allowed-transition guard, and an
+-- appended status_history entry that includes an actor field.
+-- ============================================================
+
+-- driver_mark_picked_up: transitions an order from Assigned or
+-- Ready for Pickup to Picked Up.
+--
+-- Allows Assigned → Picked Up because admin may assign a driver
+-- to an order that has already been physically prepared but not
+-- yet marked Ready for Pickup through the vendor UI.  This
+-- assumption should be revisited once vendor-dispatch is live
+-- (Phase 3) and vendors control the dispatch trigger.
+create or replace function public.driver_mark_picked_up(order_uuid uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ord public.orders%rowtype;
+begin
+  select * into ord from public.orders where id = order_uuid;
+  if ord.id is null then
+    raise exception 'Order not found';
+  end if;
+  if not exists (
+    select 1 from public.delivery_partners dp
+    where dp.id = ord.delivery_partner_id
+      and dp.auth_user_id = auth.uid()
+  ) then
+    raise exception 'Not authorized';
+  end if;
+  if ord.status in ('Delivered', 'Cancelled') then
+    raise exception 'Order is already complete';
+  end if;
+  if ord.status not in ('Assigned', 'Ready for Pickup') then
+    raise exception 'Order must be Assigned or Ready for Pickup before pickup can be confirmed';
+  end if;
+  update public.orders
+  set status = 'Picked Up',
+      status_history = coalesce(status_history, '[]'::jsonb)
+        || jsonb_build_object(
+             'status',    'Picked Up',
+             'note',      'Order picked up by delivery partner',
+             'actor',     'delivery_partner',
+             'timestamp', now()
+           )
+  where id = order_uuid;
+end;
+$$;
+
+grant execute on function public.driver_mark_picked_up(uuid) to authenticated;
+
+-- driver_mark_out_for_delivery: transitions an order from
+-- Picked Up to Out for Delivery.
+create or replace function public.driver_mark_out_for_delivery(order_uuid uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ord public.orders%rowtype;
+begin
+  select * into ord from public.orders where id = order_uuid;
+  if ord.id is null then
+    raise exception 'Order not found';
+  end if;
+  if not exists (
+    select 1 from public.delivery_partners dp
+    where dp.id = ord.delivery_partner_id
+      and dp.auth_user_id = auth.uid()
+  ) then
+    raise exception 'Not authorized';
+  end if;
+  if ord.status in ('Delivered', 'Cancelled') then
+    raise exception 'Order is already complete';
+  end if;
+  if ord.status <> 'Picked Up' then
+    raise exception 'Order must be Picked Up before it can be marked Out for Delivery';
+  end if;
+  update public.orders
+  set status = 'Out for Delivery',
+      status_history = coalesce(status_history, '[]'::jsonb)
+        || jsonb_build_object(
+             'status',    'Out for Delivery',
+             'note',      'Order is out for delivery',
+             'actor',     'delivery_partner',
+             'timestamp', now()
+           )
+  where id = order_uuid;
+end;
+$$;
+
+grant execute on function public.driver_mark_out_for_delivery(uuid) to authenticated;
+
+-- driver_cancel_delivery: cancels a delivery that is currently
+-- in an active driver state.  Requires a non-empty reason.
+-- Cancellable states: Assigned, Ready for Pickup, Picked Up,
+-- Out for Delivery.
+create or replace function public.driver_cancel_delivery(order_uuid uuid, cancel_reason text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ord public.orders%rowtype;
+begin
+  select * into ord from public.orders where id = order_uuid;
+  if ord.id is null then
+    raise exception 'Order not found';
+  end if;
+  if not exists (
+    select 1 from public.delivery_partners dp
+    where dp.id = ord.delivery_partner_id
+      and dp.auth_user_id = auth.uid()
+  ) then
+    raise exception 'Not authorized';
+  end if;
+  if ord.status in ('Delivered', 'Cancelled') then
+    raise exception 'Order is already complete';
+  end if;
+  if ord.status not in ('Assigned', 'Ready for Pickup', 'Picked Up', 'Out for Delivery') then
+    raise exception 'Order cannot be cancelled from its current state';
+  end if;
+  if cancel_reason is null or trim(cancel_reason) = '' then
+    raise exception 'Cancellation reason is required';
+  end if;
+  update public.orders
+  set status = 'Cancelled',
+      status_history = coalesce(status_history, '[]'::jsonb)
+        || jsonb_build_object(
+             'status',    'Cancelled',
+             'note',      cancel_reason,
+             'actor',     'delivery_partner',
+             'timestamp', now()
+           )
+  where id = order_uuid;
+end;
+$$;
+
+grant execute on function public.driver_cancel_delivery(uuid, text) to authenticated;
+
+-- driver_report_failed_delivery: records a delivery failure
+-- after pickup.  The current status model has no dedicated
+-- Failed status, so this sets the order to Cancelled with a
+-- note that distinguishes it from a voluntary cancellation.
+-- Phase 2 should introduce a distinct Failed status and a
+-- failure_reason column before this function is used in
+-- production.
+create or replace function public.driver_report_failed_delivery(order_uuid uuid, failure_reason text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ord public.orders%rowtype;
+begin
+  select * into ord from public.orders where id = order_uuid;
+  if ord.id is null then
+    raise exception 'Order not found';
+  end if;
+  if not exists (
+    select 1 from public.delivery_partners dp
+    where dp.id = ord.delivery_partner_id
+      and dp.auth_user_id = auth.uid()
+  ) then
+    raise exception 'Not authorized';
+  end if;
+  if ord.status in ('Delivered', 'Cancelled') then
+    raise exception 'Order is already complete';
+  end if;
+  if ord.status not in ('Picked Up', 'Out for Delivery') then
+    raise exception 'Delivery failure can only be reported after pickup';
+  end if;
+  if failure_reason is null or trim(failure_reason) = '' then
+    raise exception 'Failure reason is required';
+  end if;
+  update public.orders
+  set status = 'Cancelled',
+      status_history = coalesce(status_history, '[]'::jsonb)
+        || jsonb_build_object(
+             'status',    'Cancelled',
+             'note',      'Delivery failed: ' || failure_reason,
+             'actor',     'delivery_partner',
+             'timestamp', now()
+           )
+  where id = order_uuid;
+end;
+$$;
+
+grant execute on function public.driver_report_failed_delivery(uuid, text) to authenticated;
+
+-- ============================================================
+-- MIGRATION: driver_availability (20260613000000)
+-- ============================================================
+alter table public.delivery_partners
+  add column if not exists availability_status text not null default 'offline'
+    check (availability_status in ('offline', 'online', 'busy', 'unavailable')),
+  add column if not exists last_seen_at      timestamptz,
+  add column if not exists last_available_at timestamptz;
+
+-- security-definer RPC so drivers can update only their own
+-- availability fields without touching is_active or any other
+-- admin-managed column.
+create or replace function public.set_driver_availability(new_status text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  dp public.delivery_partners%rowtype;
+begin
+  select * into dp
+  from public.delivery_partners
+  where auth_user_id = auth.uid();
+
+  if dp.id is null then
+    raise exception 'Delivery partner record not found for this user';
+  end if;
+
+  if not dp.is_active then
+    raise exception 'Your account is inactive. Contact admin to reactivate.';
+  end if;
+
+  if new_status not in ('offline', 'online', 'busy', 'unavailable') then
+    raise exception 'Invalid availability status: %', new_status;
+  end if;
+
+  update public.delivery_partners
+  set
+    availability_status = new_status,
+    last_seen_at        = now(),
+    last_available_at   = case
+                            when new_status = 'online' then now()
+                            else last_available_at
+                          end
+  where id = dp.id;
+end;
+$$;
+
+grant execute on function public.set_driver_availability(text) to authenticated;
+
+-- ============================================================
+-- MIGRATION: delivery_requests (20260613010000)
+-- ============================================================
+
+create table public.delivery_requests (
+  id                  uuid        primary key default gen_random_uuid(),
+  order_id            uuid        not null
+    references public.orders(id)           on delete cascade,
+  delivery_partner_id uuid
+    references public.delivery_partners(id) on delete set null,
+  requested_by        uuid
+    references public.profiles(id)          on delete set null,
+  requested_by_role   text        not null
+    check (requested_by_role in ('ADMIN', 'VENDOR')),
+  status              text        not null default 'pending'
+    check (status in ('pending', 'accepted', 'rejected', 'expired', 'cancelled')),
+  reject_reason       text,
+  order_snapshot      jsonb,
+  expires_at          timestamptz,
+  responded_at        timestamptz,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now()
+);
+
+create index delivery_requests_order_id_idx
+  on public.delivery_requests(order_id);
+create index delivery_requests_partner_status_idx
+  on public.delivery_requests(delivery_partner_id, status);
+create index delivery_requests_status_expires_idx
+  on public.delivery_requests(status, expires_at)
+  where status = 'pending';
+create unique index delivery_requests_one_accepted_per_order
+  on public.delivery_requests(order_id)
+  where status = 'accepted';
+
+create trigger delivery_requests_set_updated_at
+before update on public.delivery_requests
+for each row execute function public.set_updated_at();
+
+alter table public.delivery_requests enable row level security;
+
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname  = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename  = 'delivery_requests'
+     ) then
+    alter publication supabase_realtime add table public.delivery_requests;
+  end if;
+end $$;
+
+create policy "delivery requests select allowed"
+on public.delivery_requests
+for select
+using (
+  public.is_admin()
+  or public.is_assigned_partner(delivery_partner_id)
+  or exists (
+    select 1
+    from public.orders o
+    join public.stores s on s.id = o.store_id
+    where o.id = delivery_requests.order_id
+      and s.owner_id = auth.uid()
+  )
+);
+
+create policy "delivery requests admin manage"
+on public.delivery_requests
+for all
+using  (public.is_admin())
+with check (public.is_admin());
+
+create or replace function public.create_delivery_request(
+  order_uuid      uuid,
+  partner_uuid    uuid,
+  expires_minutes integer default 10
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ord             public.orders%rowtype;
+  dp              public.delivery_partners%rowtype;
+  st              public.stores%rowtype;
+  caller_role     public.user_role;
+  partner_user    uuid;
+  new_request_id  uuid;
+  snap            jsonb;
+begin
+  select role into caller_role from public.profiles where id = auth.uid();
+  if caller_role not in ('ADMIN', 'VENDOR') then
+    raise exception 'Only admins and vendors can create delivery requests';
+  end if;
+
+  select * into ord from public.orders where id = order_uuid;
+  if ord.id is null then raise exception 'Order not found'; end if;
+  if ord.status in ('Delivered', 'Cancelled') then
+    raise exception 'Cannot dispatch a delivered or cancelled order';
+  end if;
+
+  if caller_role = 'VENDOR' then
+    if not exists (
+      select 1 from public.stores s
+      where s.id = ord.store_id and s.owner_id = auth.uid()
+    ) then
+      raise exception 'Not authorized: you do not own this order''s store';
+    end if;
+  end if;
+
+  select * into dp from public.delivery_partners where id = partner_uuid;
+  if dp.id is null then raise exception 'Delivery partner not found'; end if;
+  if not dp.is_active then raise exception 'Delivery partner account is inactive'; end if;
+
+  if exists (
+    select 1 from public.delivery_requests
+    where order_id           = order_uuid
+      and delivery_partner_id = partner_uuid
+      and status in ('pending', 'accepted')
+  ) then
+    raise exception 'An active request already exists for this driver and order';
+  end if;
+
+  select * into st from public.stores where id = ord.store_id;
+  snap := jsonb_build_object(
+    'storeId',      coalesce(ord.store_id::text, ''),
+    'storeName',    coalesce(st.name, 'Unknown store'),
+    'storeAddress', coalesce(st.address || ', ' || st.city, ''),
+    'itemCount',    jsonb_array_length(ord.items),
+    'total',        ord.total,
+    'deliveryArea', coalesce(ord.shipping_address->>'state', ord.shipping_address->>'city', '')
+  );
+
+  insert into public.delivery_requests (
+    order_id, delivery_partner_id, requested_by, requested_by_role,
+    status, order_snapshot, expires_at
+  ) values (
+    order_uuid, partner_uuid, auth.uid(), caller_role::text, 'pending', snap,
+    case when expires_minutes > 0
+         then now() + (expires_minutes || ' minutes')::interval
+         else null end
+  )
+  returning id into new_request_id;
+
+  select auth_user_id into partner_user
+  from public.delivery_partners where id = partner_uuid;
+
+  if partner_user is not null then
+    perform public.insert_notification(
+      partner_user, 'DELIVERY', 'delivery.new_request', 'New delivery request',
+      'You have a new delivery request for order #' || upper(right(order_uuid::text, 6)) || '.',
+      'delivery_request', new_request_id
+    );
+  end if;
+
+  return new_request_id;
+end;
+$$;
+
+grant execute on function public.create_delivery_request(uuid, uuid, integer) to authenticated;
+
+create or replace function public.respond_to_delivery_request(
+  request_uuid    uuid,
+  response        text,
+  p_reject_reason text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  req         public.delivery_requests%rowtype;
+  dp          public.delivery_partners%rowtype;
+  ord         public.orders%rowtype;
+  new_otp     text;
+  admin_rec   record;
+  short_id    text;
+begin
+  if response not in ('accepted', 'rejected') then
+    raise exception 'response must be ''accepted'' or ''rejected''';
+  end if;
+
+  select * into dp from public.delivery_partners where auth_user_id = auth.uid();
+  if dp.id is null then raise exception 'Delivery partner record not found for this user'; end if;
+
+  select * into req from public.delivery_requests where id = request_uuid for update;
+  if req.id is null then raise exception 'Delivery request not found'; end if;
+
+  if req.delivery_partner_id is distinct from dp.id then
+    raise exception 'Not authorized: this request was not sent to you';
+  end if;
+
+  if req.status <> 'pending' then
+    raise exception 'Request is no longer pending (current status: %)', req.status;
+  end if;
+
+  if req.expires_at is not null and req.expires_at < now() then
+    update public.delivery_requests set status = 'expired' where id = request_uuid;
+    raise exception 'This delivery request has expired';
+  end if;
+
+  short_id := upper(right(req.order_id::text, 6));
+
+  if response = 'accepted' then
+    new_otp := floor(random() * 900000 + 100000)::int::text;
+
+    update public.delivery_requests
+    set status = 'accepted', responded_at = now()
+    where id = request_uuid;
+
+    update public.delivery_requests
+    set status = 'cancelled'
+    where order_id = req.order_id and id <> request_uuid and status = 'pending';
+
+    select * into ord from public.orders where id = req.order_id;
+    update public.orders
+    set delivery_partner_id = dp.id,
+        delivery_otp        = new_otp,
+        status              = case
+                                when ord.status in (
+                                  'Placed', 'Confirmed', 'Preparing',
+                                  'Partially Available', 'Ready for Pickup'
+                                ) then 'Assigned'
+                                else ord.status
+                              end,
+        status_history      = coalesce(status_history, '[]'::jsonb)
+          || jsonb_build_object('status', 'Assigned', 'note', 'Driver accepted delivery request',
+                                'actor', 'delivery_partner', 'timestamp', now())
+    where id = req.order_id;
+
+    perform public.insert_notification(
+      ord.user_id, 'CUSTOMER', 'customer.delivery_assigned', 'Delivery partner assigned',
+      'A delivery partner has been assigned to your order #' || short_id || '.',
+      'order', req.order_id
+    );
+
+    for admin_rec in select id from public.profiles where role = 'ADMIN' loop
+      perform public.insert_notification(
+        admin_rec.id, 'ADMIN', 'admin.delivery_request_accepted', 'Driver accepted request',
+        dp.name || ' accepted the delivery request for order #' || short_id || '.',
+        'delivery_request', request_uuid
+      );
+    end loop;
+
+  else
+    update public.delivery_requests
+    set status = 'rejected', responded_at = now(), reject_reason = coalesce(p_reject_reason, '')
+    where id = request_uuid;
+
+    for admin_rec in select id from public.profiles where role = 'ADMIN' loop
+      perform public.insert_notification(
+        admin_rec.id, 'ADMIN', 'admin.delivery_request_rejected', 'Driver rejected request',
+        dp.name || ' rejected the request for order #' || short_id || '.'
+          || case when p_reject_reason is not null and trim(p_reject_reason) <> ''
+                  then ' Reason: ' || p_reject_reason else '' end,
+        'delivery_request', request_uuid
+      );
+    end loop;
+  end if;
+end;
+$$;
+
+grant execute on function public.respond_to_delivery_request(uuid, text, text) to authenticated;
+
+create or replace function public.expire_pending_delivery_requests()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare n integer;
+begin
+  update public.delivery_requests
+  set status = 'expired'
+  where status = 'pending' and expires_at is not null and expires_at < now();
+  get diagnostics n = row_count;
+  return n;
+end;
+$$;
+
+grant execute on function public.expire_pending_delivery_requests() to authenticated;
+
+-- ============================================================
+-- MIGRATION: driver_request_rpcs (20260613020000)
+-- ============================================================
+
+create or replace function public.accept_delivery_request(request_uuid uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.respond_to_delivery_request(request_uuid, 'accepted', null);
+end;
+$$;
+
+grant execute on function public.accept_delivery_request(uuid) to authenticated;
+
+create or replace function public.reject_delivery_request(
+  request_uuid  uuid,
+  reject_reason text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.respond_to_delivery_request(request_uuid, 'rejected', reject_reason);
+end;
+$$;
+
+grant execute on function public.reject_delivery_request(uuid, text) to authenticated;
+
+-- ============================================================
+-- MIGRATION: failed_delivery_status (20260613030000)
+-- Adds explicit 'Failed Delivery' status for post-pickup
+-- delivery failures, distinct from voluntary cancellations.
+-- Admins and vendors can see the failure reason.
+-- The RPC is idempotent (create or replace) and backward-
+-- compatible: the old 2-arg call still works.
+-- ============================================================
+
+create or replace function public.driver_report_failed_delivery(
+  order_uuid     uuid,
+  failure_reason text,
+  p_note         text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ord        public.orders%rowtype;
+  dp         public.delivery_partners%rowtype;
+  admin_rec  record;
+  short_id   text;
+  hist_note  text;
+begin
+  select * into ord from public.orders where id = order_uuid;
+  if ord.id is null then
+    raise exception 'Order not found';
+  end if;
+
+  if not exists (
+    select 1 from public.delivery_partners dp2
+    where dp2.id = ord.delivery_partner_id
+      and dp2.auth_user_id = auth.uid()
+  ) then
+    raise exception 'Not authorized';
+  end if;
+
+  if ord.status in ('Delivered', 'Cancelled', 'Failed Delivery') then
+    raise exception 'Order is already complete';
+  end if;
+
+  -- Failure can only be reported after the order has left the store.
+  if ord.status not in ('Picked Up', 'Out for Delivery') then
+    raise exception 'Delivery failure can only be reported after pickup';
+  end if;
+
+  if failure_reason is null or trim(failure_reason) = '' then
+    raise exception 'Failure reason is required';
+  end if;
+
+  select * into dp from public.delivery_partners where auth_user_id = auth.uid();
+
+  -- Combine reason and optional note into a single history note.
+  hist_note := failure_reason;
+  if p_note is not null and trim(p_note) <> '' then
+    hist_note := failure_reason || ' — ' || p_note;
+  end if;
+
+  short_id := upper(right(order_uuid::text, 6));
+
+  update public.orders
+  set status = 'Failed Delivery',
+      status_history = coalesce(status_history, '[]'::jsonb)
+        || jsonb_build_object(
+             'status',    'Failed Delivery',
+             'note',      hist_note,
+             'actor',     'delivery_partner',
+             'timestamp', now()
+           )
+  where id = order_uuid;
+
+  -- Notify all admins so they can reassign or close.
+  for admin_rec in select id from public.profiles where role = 'ADMIN' loop
+    perform public.insert_notification(
+      admin_rec.id, 'ADMIN', 'admin.delivery_failed', 'Delivery failed',
+      coalesce(dp.name, 'A driver') || ' reported a failed delivery for order #'
+        || short_id || '. Reason: ' || failure_reason,
+      'order', order_uuid
+    );
+  end loop;
+end;
+$$;
+
+-- ============================================================
+-- Migration 20260613040000: vendor-side delivery dispatch
+-- Adds self_delivery_enabled to stores, partner_type/store_id
+-- to delivery_partners, and RPCs for vendor dispatch.
+-- ============================================================
+
+alter table public.stores
+  add column if not exists self_delivery_enabled boolean not null default false;
+
+alter table public.delivery_partners
+  add column if not exists partner_type text not null default 'marketplace'
+    check (partner_type in ('marketplace', 'store_owned')),
+  add column if not exists store_id uuid references public.stores(id) on delete set null;
+
+create index if not exists delivery_partners_store_id_idx
+  on public.delivery_partners (store_id);
+
+create index if not exists delivery_partners_type_store_idx
+  on public.delivery_partners (partner_type, store_id);
+
+-- Vendors can read store-owned drivers that belong to their store.
+create policy "vendor_read_store_drivers"
+  on public.delivery_partners
+  for select
+  using (
+    partner_type = 'store_owned'
+    and store_id is not null
+    and is_vendor_for_store(store_id)
+  );
+
+-- Admin-only RPC: toggle self-delivery for a store.
+create or replace function public.set_store_self_delivery(
+  store_uuid uuid,
+  enabled    boolean
+)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not is_admin() then
+    raise exception 'Only admins can toggle self-delivery for a store.';
+  end if;
+  update public.stores
+    set self_delivery_enabled = enabled,
+        updated_at = now()
+  where id = store_uuid;
+  if not found then
+    raise exception 'Store not found.';
+  end if;
+end;
+$$;
+grant execute on function public.set_store_self_delivery(uuid, boolean) to authenticated;
+
+-- Vendor RPC: broadcast a marketplace delivery request.
+create or replace function public.vendor_request_marketplace_driver(
+  order_uuid uuid
+)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare
+  ord        public.orders%rowtype;
+  store_rec  public.stores%rowtype;
+  request_id uuid;
+  snap       jsonb;
+begin
+  select * into ord from public.orders where id = order_uuid for update;
+  if not found then
+    raise exception 'Order not found.';
+  end if;
+  if ord.status != 'Ready for Pickup' then
+    raise exception 'Order must be Ready for Pickup to request a driver (current: %).', ord.status;
+  end if;
+  if ord.delivery_partner_id is not null then
+    raise exception 'A delivery partner is already assigned to this order.';
+  end if;
+  select * into store_rec from public.stores where id = ord.store_id;
+  if not found or not is_vendor_for_store(store_rec.id) then
+    raise exception 'You do not have permission to request a driver for this order.';
+  end if;
+  if exists (
+    select 1 from public.delivery_requests
+    where order_id = order_uuid and status in ('pending', 'accepted')
+  ) then
+    raise exception 'A delivery request is already active for this order.';
+  end if;
+  snap := jsonb_build_object(
+    'storeId',      store_rec.id,
+    'storeName',    store_rec.name,
+    'storeAddress', store_rec.address || ', ' || store_rec.city,
+    'itemCount',    jsonb_array_length(ord.items),
+    'total',        ord.total,
+    'deliveryArea', coalesce(
+      (ord.shipping_address->>'area'),
+      (ord.shipping_address->>'state'),
+      ''
+    )
+  );
+  insert into public.delivery_requests (
+    order_id, requested_by, requested_by_role, status, order_snapshot, expires_at
+  ) values (
+    order_uuid,
+    auth.uid(),
+    'VENDOR',
+    'pending',
+    snap,
+    now() + interval '15 minutes'
+  )
+  returning id into request_id;
+  return request_id;
+end;
+$$;
+grant execute on function public.vendor_request_marketplace_driver(uuid) to authenticated;
+
+-- Vendor RPC: directly assign a store-owned driver.
+create or replace function public.vendor_assign_store_driver(
+  order_uuid          uuid,
+  driver_partner_uuid uuid
+)
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  ord        public.orders%rowtype;
+  store_rec  public.stores%rowtype;
+  dp         public.delivery_partners%rowtype;
+begin
+  select * into ord from public.orders where id = order_uuid for update;
+  if not found then
+    raise exception 'Order not found.';
+  end if;
+  if ord.status != 'Ready for Pickup' then
+    raise exception 'Order must be Ready for Pickup to assign a driver (current: %).', ord.status;
+  end if;
+  if ord.delivery_partner_id is not null then
+    raise exception 'A delivery partner is already assigned to this order.';
+  end if;
+  select * into store_rec from public.stores where id = ord.store_id;
+  if not found or not is_vendor_for_store(store_rec.id) then
+    raise exception 'You do not have permission to assign a driver for this order.';
+  end if;
+  if not store_rec.self_delivery_enabled then
+    raise exception 'Self-delivery is not enabled for this store.';
+  end if;
+  select * into dp from public.delivery_partners where id = driver_partner_uuid;
+  if not found then
+    raise exception 'Delivery partner not found.';
+  end if;
+  if dp.partner_type != 'store_owned' then
+    raise exception 'Only store-owned drivers can be directly assigned.';
+  end if;
+  if dp.store_id != store_rec.id then
+    raise exception 'This driver does not belong to your store.';
+  end if;
+  if not dp.is_active then
+    raise exception 'This delivery partner is not active.';
+  end if;
+  if dp.availability_status not in ('online', 'busy') then
+    raise exception 'This driver is not available (status: %).', dp.availability_status;
+  end if;
+  update public.orders
+  set delivery_partner_id = driver_partner_uuid,
+      status = 'Assigned',
+      status_history = coalesce(status_history, '[]'::jsonb) || jsonb_build_object(
+        'status',    'Assigned',
+        'note',      'Assigned to store driver: ' || dp.name,
+        'actor',     'vendor',
+        'timestamp', now()
+      )
+  where id = order_uuid;
+end;
+$$;
+grant execute on function public.vendor_assign_store_driver(uuid, uuid) to authenticated;
+
+grant execute on function public.driver_report_failed_delivery(uuid, text, text) to authenticated;

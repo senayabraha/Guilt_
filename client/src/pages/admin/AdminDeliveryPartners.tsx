@@ -2,16 +2,18 @@ import { useEffect, useState } from "react";
 import { PlusIcon, XIcon, TruckIcon, PhoneIcon, MailIcon } from "lucide-react";
 import toast from "react-hot-toast";
 
-import type { DeliveryPartner } from "../../types";
+import type { DeliveryPartner, DriverAvailabilityStatus, Store } from "../../types";
 import Loading from "../../components/Loading";
 import {
   getAllPartners,
   createPartner,
   updatePartner,
 } from "../../lib/db/deliveryPartners";
+import { getAllStores } from "../../lib/db/stores";
 
 export default function AdminDeliveryPartners() {
   const [partners, setPartners] = useState<DeliveryPartner[]>([]);
+  const [stores, setStores] = useState<Store[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -21,11 +23,18 @@ export default function AdminDeliveryPartners() {
     password: "",
     phone: "",
     vehicleType: "bike",
+    partnerType: "marketplace" as "marketplace" | "store_owned",
+    storeId: "",
   });
 
   const fetchPartners = async () => {
     try {
-      setPartners(await getAllPartners());
+      const [partnersData, storesData] = await Promise.all([
+        getAllPartners(),
+        getAllStores(),
+      ]);
+      setPartners(partnersData);
+      setStores(storesData);
     } catch (error: any) {
       toast.error(error?.message || "Failed");
     } finally {
@@ -39,9 +48,16 @@ export default function AdminDeliveryPartners() {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (form.partnerType === "store_owned" && !form.storeId) {
+      toast.error("Please select a store for this store-owned driver.");
+      return;
+    }
     setSaving(true);
     try {
-      await createPartner(form);
+      await createPartner({
+        ...form,
+        storeId: form.partnerType === "store_owned" ? form.storeId : null,
+      });
       toast.success("Partner onboarded successfully!");
       setShowForm(false);
       setForm({
@@ -50,6 +66,8 @@ export default function AdminDeliveryPartners() {
         password: "",
         phone: "",
         vehicleType: "bike",
+        partnerType: "marketplace",
+        storeId: "",
       });
       fetchPartners();
     } catch (error: any) {
@@ -67,6 +85,19 @@ export default function AdminDeliveryPartners() {
     } catch (error: any) {
       toast.error(error?.message || "Failed");
     }
+  };
+
+  const AVAIL_DOT: Record<DriverAvailabilityStatus, string> = {
+    online: "bg-green-500",
+    busy: "bg-amber-500",
+    unavailable: "bg-red-400",
+    offline: "bg-zinc-400",
+  };
+  const AVAIL_LABEL: Record<DriverAvailabilityStatus, string> = {
+    online: "Online",
+    busy: "Busy",
+    unavailable: "Unavailable",
+    offline: "Offline",
   };
 
   if (loading) return <Loading />;
@@ -119,11 +150,28 @@ export default function AdminDeliveryPartners() {
                     </p>
                   </div>
                 </div>
-                <span
-                  className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${p.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
-                >
-                  {p.isActive ? "Active" : "Inactive"}
-                </span>
+                <div className="flex flex-col items-end gap-1.5">
+                  <span
+                    className={`px-2.5 py-1 text-[10px] font-semibold rounded-full ${p.isActive ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"}`}
+                  >
+                    {p.isActive ? "Active" : "Inactive"}
+                  </span>
+                  <span className="flex items-center gap-1 text-[10px] text-zinc-500">
+                    <span
+                      className={`size-1.5 rounded-full ${AVAIL_DOT[p.availabilityStatus]}`}
+                    />
+                    {AVAIL_LABEL[p.availabilityStatus]}
+                  </span>
+                  <span
+                    className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${
+                      p.partnerType === "store_owned"
+                        ? "bg-purple-100 text-purple-700"
+                        : "bg-zinc-100 text-zinc-600"
+                    }`}
+                  >
+                    {p.partnerType === "store_owned" ? "Store" : "Marketplace"}
+                  </span>
+                </div>
               </div>
               <div className="space-y-1.5 text-sm text-zinc-600">
                 <p className="flex items-center gap-2">
@@ -244,6 +292,52 @@ export default function AdminDeliveryPartners() {
                     </select>
                   </div>
                 </div>
+                <div>
+                  <label className="block text-sm font-medium text-app-green mb-1.5">
+                    Partner Type
+                  </label>
+                  <select
+                    value={form.partnerType}
+                    onChange={(e) =>
+                      setForm({
+                        ...form,
+                        partnerType: e.target.value as "marketplace" | "store_owned",
+                        storeId: "",
+                      })
+                    }
+                    className="w-full px-4 py-2.5 text-sm rounded-xl border border-app-border focus:border-app-green outline-none bg-white"
+                  >
+                    <option value="marketplace">Marketplace (shared pool)</option>
+                    <option value="store_owned">Store-owned (linked to a specific store)</option>
+                  </select>
+                </div>
+                {form.partnerType === "store_owned" && (
+                  <div>
+                    <label className="block text-sm font-medium text-app-green mb-1.5">
+                      Linked Store <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      value={form.storeId}
+                      required
+                      onChange={(e) => setForm({ ...form, storeId: e.target.value })}
+                      className="w-full px-4 py-2.5 text-sm rounded-xl border border-app-border focus:border-app-green outline-none bg-white"
+                    >
+                      <option value="">Select a store…</option>
+                      {stores
+                        .filter((s) => s.selfDeliveryEnabled)
+                        .map((s) => (
+                          <option key={s.id} value={s.id}>
+                            {s.name}
+                          </option>
+                        ))}
+                    </select>
+                    {stores.filter((s) => s.selfDeliveryEnabled).length === 0 && (
+                      <p className="mt-1 text-xs text-amber-600">
+                        No stores have self-delivery enabled. Enable it in the store detail page first.
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
               <button
                 type="submit"

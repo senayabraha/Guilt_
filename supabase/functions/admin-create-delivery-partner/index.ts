@@ -38,9 +38,11 @@ Deno.serve(async (req) => {
       .maybeSingle();
     if (profile?.role !== "ADMIN") return json({ error: "Admin access required" }, 403);
 
-    const { name, email, password, phone, vehicleType } = await req.json();
+    const { name, email, password, phone, vehicleType, partnerType, storeId } = await req.json();
     if (!name || !email || !password || !phone)
       return json({ error: "Missing required fields" }, 400);
+    if (partnerType === "store_owned" && !storeId)
+      return json({ error: "storeId is required for store_owned partners" }, 400);
 
     // Create the auth user.
     const { data: created, error: createErr } = await admin.auth.admin.createUser({
@@ -58,6 +60,8 @@ Deno.serve(async (req) => {
       email: String(email).toLowerCase(),
       phone,
       vehicle_type: vehicleType ?? "bike",
+      partner_type: partnerType ?? "marketplace",
+      store_id: storeId ?? null,
     });
     if (insertErr) {
       // Roll back the auth user if the row insert failed.

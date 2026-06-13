@@ -30,9 +30,9 @@ export async function getMyDeliveries(
     .select(PICKUP_FULL)
     .eq("delivery_partner_id", partnerId);
   if (status === "active")
-    query = query.in("status", ["Ready for Pickup", "Picked Up", "Out for Delivery"]);
+    query = query.in("status", ["Assigned", "Ready for Pickup", "Picked Up", "Out for Delivery"]);
   else if (status === "completed")
-    query = query.in("status", ["Delivered", "Cancelled"]);
+    query = query.in("status", ["Delivered", "Cancelled", "Failed Delivery"]);
   const { data, error } = await query.order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []).map(mapOrder);
@@ -75,6 +75,75 @@ export async function completeDelivery(id: string, otp: string): Promise<void> {
   );
 }
 
+// --- Driver delivery actions ---
+// Each function calls its own server-side RPC (security definer) which
+// validates the caller is the assigned partner and enforces the allowed
+// status transition.  Notifications are fired client-side after the RPC
+// succeeds, matching the pattern used by completeDelivery.
+
+export async function markDeliveryPickedUp(orderId: string): Promise<void> {
+  const { error } = await supabase.rpc("driver_mark_picked_up", {
+    order_uuid: orderId,
+  });
+  if (error) throw error;
+  notifyOrderStatusChanged(orderId, "Picked Up").catch((err) =>
+    console.warn("Failed to create status notification", err),
+  );
+}
+
+export async function markDeliveryOutForDelivery(orderId: string): Promise<void> {
+  const { error } = await supabase.rpc("driver_mark_out_for_delivery", {
+    order_uuid: orderId,
+  });
+  if (error) throw error;
+  notifyOrderStatusChanged(orderId, "Out for Delivery").catch((err) =>
+    console.warn("Failed to create status notification", err),
+  );
+}
+
+export async function cancelDelivery(
+  orderId: string,
+  reason: string,
+): Promise<void> {
+  if (!reason.trim()) throw new Error("Cancellation reason is required.");
+  const { error } = await supabase.rpc("driver_cancel_delivery", {
+    order_uuid: orderId,
+    cancel_reason: reason,
+  });
+  if (error) throw error;
+  notifyOrderStatusChanged(orderId, "Cancelled").catch((err) =>
+    console.warn("Failed to create status notification", err),
+  );
+}
+
+export async function reportFailedDelivery(
+  orderId: string,
+  failureReason: string,
+  note?: string,
+): Promise<void> {
+  if (!failureReason.trim()) throw new Error("Failure reason is required.");
+  const { error } = await supabase.rpc("driver_report_failed_delivery", {
+    order_uuid: orderId,
+    failure_reason: failureReason,
+    p_note: note ?? null,
+  });
+  if (error) throw error;
+  notifyOrderStatusChanged(orderId, "Failed Delivery").catch((err) =>
+    console.warn("Failed to create status notification", err),
+  );
+}
+
+// --- Driver availability ---
+
+export async function updateDriverAvailability(
+  status: "offline" | "online" | "busy" | "unavailable",
+): Promise<void> {
+  const { error } = await supabase.rpc("set_driver_availability", {
+    new_status: status,
+  });
+  if (error) throw error;
+}
+
 // --- Admin management ---
 
 export async function getAllPartners(): Promise<DeliveryPartner[]> {
@@ -113,10 +182,49 @@ export async function createPartner(payload: {
   password: string;
   phone: string;
   vehicleType?: string;
+  partnerType?: "marketplace" | "store_owned";
+  storeId?: string | null;
 }): Promise<void> {
   const { error } = await supabase.functions.invoke(
     "admin-create-delivery-partner",
     { body: payload },
   );
+  if (error) throw error;
+}
+
+// Fetch active store-owned drivers for a specific store.
+export async function getStoreOwnedDrivers(
+  storeId: string,
+): Promise<DeliveryPartner[]> {
+  const { data, error } = await supabase
+    .from("delivery_partners")
+    .select("*")
+    .eq("partner_type", "store_owned")
+    .eq("store_id", storeId)
+    .eq("is_active", true)
+    .in("availability_status", ["online", "busy"])
+    .order("name");
+  if (error) throw error;
+  return (data ?? []).map(mapDeliveryPartner);
+}
+
+// Vendor: broadcast a marketplace delivery request for an order.
+export async function requestMarketplaceDriver(orderId: string): Promise<string> {
+  const { data, error } = await supabase.rpc("vendor_request_marketplace_driver", {
+    order_uuid: orderId,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+// Vendor: directly assign a store-owned driver to an order.
+export async function assignStoreDriverToOrder(
+  orderId: string,
+  driverId: string,
+): Promise<void> {
+  const { error } = await supabase.rpc("vendor_assign_store_driver", {
+    order_uuid: orderId,
+    driver_partner_uuid: driverId,
+  });
   if (error) throw error;
 }

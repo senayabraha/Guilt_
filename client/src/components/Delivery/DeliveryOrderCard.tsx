@@ -1,63 +1,65 @@
-import {
-  CheckCircleIcon,
-  ClockIcon,
-  ExternalLinkIcon,
-  MapPinIcon,
-  PhoneIcon,
-  StoreIcon,
-  TruckIcon,
-  XCircleIcon,
-} from "lucide-react";
+import { ClockIcon, MapPinIcon, PackageIcon, StoreIcon } from "lucide-react";
+import { Link } from "react-router-dom";
 import type { Order } from "../../types";
 import { statusColors } from "../../assets/assets";
 import { formatCurrency } from "../../lib/format";
 
+const STATUS_CONTEXT: Record<
+  string,
+  { bg: string; text: string; message: string }
+> = {
+  Assigned: {
+    bg: "bg-amber-50",
+    text: "text-amber-800",
+    message: "Waiting for the store to prepare this order.",
+  },
+  "Ready for Pickup": {
+    bg: "bg-blue-50",
+    text: "text-blue-800",
+    message: "Order is ready — head to the store for pickup.",
+  },
+  "Picked Up": {
+    bg: "bg-indigo-50",
+    text: "text-indigo-800",
+    message: "You have the order. Start delivery when ready.",
+  },
+  "Out for Delivery": {
+    bg: "bg-green-50",
+    text: "text-green-800",
+    message: "Get the OTP from the customer to complete this delivery.",
+  },
+};
+
 interface DeliveryOrderCardProps {
   order: Order;
   tab: "active" | "completed";
-  handleUpdateStatus: (orderId: string, status: string) => void;
-  setOtpModal: (orderId: string) => void;
-  setCancelModal: (orderId: string) => void;
+  isPriority?: boolean;
 }
 
 export default function DeliveryOrderCard({
   order,
   tab,
-  handleUpdateStatus,
-  setOtpModal,
-  setCancelModal,
+  isPriority,
 }: DeliveryOrderCardProps) {
-  const user =
-    typeof order.user === "object"
-      ? order.user
-      : { name: "Customer", email: "", phone: "" };
-
   const store = order.store;
   const ship = (order.shippingAddress as any) || {};
-
-  const hasStorePin =
-    !!store && !!store.lat && !!store.lng && !(store.lat === 0 && store.lng === 0);
-  const hasDropPin =
-    !!ship.lat && !!ship.lng && !(ship.lat === 0 && ship.lng === 0);
-
-  const dropName = ship.fullName || user.name;
-  const dropPhone = ship.phone || user.phone;
   const dropArea = ship.area || ship.state;
-  const dropInstructions = ship.instructions || ship.address;
+  const orderId = order.id || order._id;
+  const context = STATUS_CONTEXT[order.status];
 
-  return (
-    <div
-      key={order._id}
-      className="bg-white rounded-2xl border border-app-border overflow-hidden"
-    >
+  const inner = (
+    <div className="bg-white rounded-2xl border border-app-border overflow-hidden">
+      {/* Priority stripe */}
+      {isPriority && tab === "active" && <div className="h-1 bg-app-green" />}
+
       {/* Header */}
       <div className="px-5 py-4 border-b border-app-border flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-mono text-zinc-500">
+        <div className="flex items-center gap-2.5">
+          <span className="text-sm font-mono text-zinc-400">
             #{order._id.slice(-6).toUpperCase()}
           </span>
           <span
-            className={`px-2.5 py-1 text-xs font-semibold rounded-full ${statusColors[order.status] || "bg-zinc-100 text-zinc-600"}`}
+            className={`px-2.5 py-0.5 text-xs font-semibold rounded-full ${statusColors[order.status] || "bg-zinc-100 text-zinc-600"}`}
           >
             {order.status}
           </span>
@@ -67,116 +69,55 @@ export default function DeliveryOrderCard({
         </span>
       </div>
 
-      {/* Body */}
-      <div className="px-5 py-4 space-y-4">
-        {/* Pickup (from store) */}
-        {store && (
-          <div className="space-y-1.5 text-sm text-zinc-600">
-            <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-app-green">
-              <StoreIcon className="size-3.5" /> Pickup
-            </p>
-            <p className="font-medium text-zinc-900">{store.name}</p>
-            {store.phone && (
-              <p className="flex items-center gap-1 text-xs text-zinc-500">
-                <PhoneIcon className="size-3" /> {store.phone}
-              </p>
-            )}
-            {(store.state || store.city) && (
-              <p className="text-sm">
-                {store.state}
-                {store.state && store.city ? ", " : ""}
-                {store.city}
-              </p>
-            )}
-            {store.address && <p className="text-sm">{store.address}</p>}
-            {hasStorePin && (
-              <a
-                href={`https://www.google.com/maps?q=${store.lat},${store.lng}`}
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-1 text-xs font-medium text-app-green hover:underline"
-              >
-                <ExternalLinkIcon className="size-3" /> Open pickup in Google Maps
-              </a>
-            )}
-          </div>
-        )}
-
-        {/* Dropoff (to customer) */}
-        <div className="space-y-1.5 text-sm text-zinc-600">
-          <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-app-green">
-            <MapPinIcon className="size-3.5" /> Dropoff
-          </p>
-          {dropName && <p className="font-medium text-zinc-900">{dropName}</p>}
-          {dropPhone && (
-            <p className="flex items-center gap-1 text-xs text-zinc-500">
-              <PhoneIcon className="size-3" /> {dropPhone}
-            </p>
-          )}
-          {dropArea && <p className="text-sm">{dropArea}</p>}
-          {dropInstructions && <p className="text-sm">{dropInstructions}</p>}
-          {hasDropPin && (
-            <a
-              href={`https://www.google.com/maps?q=${ship.lat},${ship.lng}`}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs font-medium text-app-green hover:underline"
-            >
-              <ExternalLinkIcon className="size-3" /> Open dropoff in Google Maps
-            </a>
-          )}
-        </div>
-
-        {/* Items count */}
-        <p className="text-xs text-zinc-500">
-          {order.items.length} item{order.items.length > 1 ? "s" : ""} •{" "}
-          {order.paymentMethod.toUpperCase()}
-        </p>
-      </div>
-
-      {/* Actions */}
-      {tab === "active" && (
-        <div className="px-5 py-3 border-t border-app-border flex flex-wrap gap-2">
-          {(order.status === "Ready for Pickup" || order.status === "Picked Up") && (
-            <button
-              onClick={() =>
-                handleUpdateStatus(
-                  order._id,
-                  order.status === "Ready for Pickup" ? "Picked Up" : "Out for Delivery",
-                )
-              }
-              className="px-4 py-2 text-sm font-medium bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 transition-colors flex items-center gap-1.5"
-            >
-              <TruckIcon className="w-3.5 h-3.5" />
-              {order.status === "Ready for Pickup" ? "Mark Picked Up" : "Out for Delivery"}
-            </button>
-          )}
-          {!["Ready for Pickup", "Picked Up", "Out for Delivery", "Delivered", "Cancelled"].includes(order.status) && (
-            <p className="px-3 py-2 rounded-xl bg-amber-50 text-amber-800 text-xs font-medium">
-              Store must mark this order Ready for Pickup before pickup.
-            </p>
-          )}
-          {order.status === "Out for Delivery" && (
-            <button
-              onClick={() => setOtpModal(order._id)}
-              className="px-4 py-2 text-sm font-medium bg-green-50 text-green-700 rounded-xl hover:bg-green-100 transition-colors flex items-center gap-1.5"
-            >
-              <CheckCircleIcon className="w-3.5 h-3.5" /> Mark Delivered
-            </button>
-          )}
-          {order.status !== "Delivered" && order.status !== "Cancelled" && (
-            <button
-              onClick={() => setCancelModal(order._id)}
-              className="px-4 py-2 text-sm font-medium bg-red-50 text-red-700 rounded-xl hover:bg-red-100 transition-colors flex items-center gap-1.5"
-            >
-              <XCircleIcon className="w-3.5 h-3.5" /> Cancel
-            </button>
-          )}
+      {/* Status context banner */}
+      {tab === "active" && context && (
+        <div
+          className={`px-5 py-2.5 text-xs font-medium ${context.bg} ${context.text}`}
+        >
+          {context.message}
         </div>
       )}
 
-      {tab === "completed" && (
-        <div className="px-5 py-3 border-t border-app-border">
+      {/* Route summary */}
+      <div className="px-5 py-4 space-y-2.5">
+        {store && (
+          <div className="flex items-center gap-2 text-sm text-zinc-700">
+            <StoreIcon className="size-3.5 text-app-green shrink-0" />
+            <span className="font-medium truncate">{store.name}</span>
+          </div>
+        )}
+        {store && dropArea && (
+          <div className="ml-3.5 w-px h-3 border-l-2 border-dashed border-zinc-200" />
+        )}
+        {dropArea && (
+          <div className="flex items-center gap-2 text-sm text-zinc-700">
+            <MapPinIcon className="size-3.5 text-blue-500 shrink-0" />
+            <span className="truncate">{dropArea}</span>
+          </div>
+        )}
+
+        {/* Meta */}
+        <div className="flex items-center gap-1.5 pt-1">
+          <PackageIcon className="size-3 text-zinc-400 shrink-0" />
+          <span className="text-xs text-zinc-400">
+            {order.items.length} item{order.items.length !== 1 ? "s" : ""}
+          </span>
+          <span className="text-zinc-300">·</span>
+          <span className="text-xs text-zinc-400">
+            {order.paymentMethod.toUpperCase()}
+          </span>
+        </div>
+      </div>
+
+      {/* Footer */}
+      {tab === "active" ? (
+        <div className="px-5 py-3 border-t border-app-border bg-zinc-50/60 flex items-center justify-end">
+          <span className="text-xs font-semibold text-app-green">
+            View Details →
+          </span>
+        </div>
+      ) : (
+        <div className="px-5 py-3 border-t border-app-border flex items-center justify-between">
           <p className="text-xs text-zinc-500 flex items-center gap-1">
             <ClockIcon className="size-3" />
             {new Date(order.createdAt).toLocaleDateString("en-US", {
@@ -185,8 +126,29 @@ export default function DeliveryOrderCard({
               year: "numeric",
             })}
           </p>
+          <span
+            className={`px-2 py-0.5 text-xs font-medium rounded-full ${
+              order.status === "Delivered"
+                ? "bg-green-100 text-green-700"
+                : order.status === "Failed Delivery"
+                  ? "bg-orange-100 text-orange-700"
+                  : "bg-red-100 text-red-700"
+            }`}
+          >
+            {order.status}
+          </span>
         </div>
       )}
     </div>
   );
+
+  if (tab === "active") {
+    return (
+      <Link to={`/delivery/orders/${orderId}`} className="block">
+        {inner}
+      </Link>
+    );
+  }
+
+  return inner;
 }
