@@ -1614,4 +1614,172 @@ begin
 end;
 $$;
 
+-- ============================================================
+-- Migration 20260613040000: vendor-side delivery dispatch
+-- Adds self_delivery_enabled to stores, partner_type/store_id
+-- to delivery_partners, and RPCs for vendor dispatch.
+-- ============================================================
+
+alter table public.stores
+  add column if not exists self_delivery_enabled boolean not null default false;
+
+alter table public.delivery_partners
+  add column if not exists partner_type text not null default 'marketplace'
+    check (partner_type in ('marketplace', 'store_owned')),
+  add column if not exists store_id uuid references public.stores(id) on delete set null;
+
+create index if not exists delivery_partners_store_id_idx
+  on public.delivery_partners (store_id);
+
+create index if not exists delivery_partners_type_store_idx
+  on public.delivery_partners (partner_type, store_id);
+
+-- Vendors can read store-owned drivers that belong to their store.
+create policy "vendor_read_store_drivers"
+  on public.delivery_partners
+  for select
+  using (
+    partner_type = 'store_owned'
+    and store_id is not null
+    and is_vendor_for_store(store_id)
+  );
+
+-- Admin-only RPC: toggle self-delivery for a store.
+create or replace function public.set_store_self_delivery(
+  store_uuid uuid,
+  enabled    boolean
+)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if not is_admin() then
+    raise exception 'Only admins can toggle self-delivery for a store.';
+  end if;
+  update public.stores
+    set self_delivery_enabled = enabled,
+        updated_at = now()
+  where id = store_uuid;
+  if not found then
+    raise exception 'Store not found.';
+  end if;
+end;
+$$;
+grant execute on function public.set_store_self_delivery(uuid, boolean) to authenticated;
+
+-- Vendor RPC: broadcast a marketplace delivery request.
+create or replace function public.vendor_request_marketplace_driver(
+  order_uuid uuid
+)
+returns uuid language plpgsql security definer set search_path = public as $$
+declare
+  ord        public.orders%rowtype;
+  store_rec  public.stores%rowtype;
+  request_id uuid;
+  snap       jsonb;
+begin
+  select * into ord from public.orders where id = order_uuid for update;
+  if not found then
+    raise exception 'Order not found.';
+  end if;
+  if ord.status != 'Ready for Pickup' then
+    raise exception 'Order must be Ready for Pickup to request a driver (current: %).', ord.status;
+  end if;
+  if ord.delivery_partner_id is not null then
+    raise exception 'A delivery partner is already assigned to this order.';
+  end if;
+  select * into store_rec from public.stores where id = ord.store_id;
+  if not found or not is_vendor_for_store(store_rec.id) then
+    raise exception 'You do not have permission to request a driver for this order.';
+  end if;
+  if exists (
+    select 1 from public.delivery_requests
+    where order_id = order_uuid and status in ('pending', 'accepted')
+  ) then
+    raise exception 'A delivery request is already active for this order.';
+  end if;
+  snap := jsonb_build_object(
+    'storeId',      store_rec.id,
+    'storeName',    store_rec.name,
+    'storeAddress', store_rec.address || ', ' || store_rec.city,
+    'itemCount',    jsonb_array_length(ord.items),
+    'total',        ord.total,
+    'deliveryArea', coalesce(
+      (ord.shipping_address->>'area'),
+      (ord.shipping_address->>'state'),
+      ''
+    )
+  );
+  insert into public.delivery_requests (
+    order_id, requested_by, requested_by_role, status, order_snapshot, expires_at
+  ) values (
+    order_uuid,
+    auth.uid(),
+    'VENDOR',
+    'pending',
+    snap,
+    now() + interval '15 minutes'
+  )
+  returning id into request_id;
+  return request_id;
+end;
+$$;
+grant execute on function public.vendor_request_marketplace_driver(uuid) to authenticated;
+
+-- Vendor RPC: directly assign a store-owned driver.
+create or replace function public.vendor_assign_store_driver(
+  order_uuid          uuid,
+  driver_partner_uuid uuid
+)
+returns void language plpgsql security definer set search_path = public as $$
+declare
+  ord        public.orders%rowtype;
+  store_rec  public.stores%rowtype;
+  dp         public.delivery_partners%rowtype;
+begin
+  select * into ord from public.orders where id = order_uuid for update;
+  if not found then
+    raise exception 'Order not found.';
+  end if;
+  if ord.status != 'Ready for Pickup' then
+    raise exception 'Order must be Ready for Pickup to assign a driver (current: %).', ord.status;
+  end if;
+  if ord.delivery_partner_id is not null then
+    raise exception 'A delivery partner is already assigned to this order.';
+  end if;
+  select * into store_rec from public.stores where id = ord.store_id;
+  if not found or not is_vendor_for_store(store_rec.id) then
+    raise exception 'You do not have permission to assign a driver for this order.';
+  end if;
+  if not store_rec.self_delivery_enabled then
+    raise exception 'Self-delivery is not enabled for this store.';
+  end if;
+  select * into dp from public.delivery_partners where id = driver_partner_uuid;
+  if not found then
+    raise exception 'Delivery partner not found.';
+  end if;
+  if dp.partner_type != 'store_owned' then
+    raise exception 'Only store-owned drivers can be directly assigned.';
+  end if;
+  if dp.store_id != store_rec.id then
+    raise exception 'This driver does not belong to your store.';
+  end if;
+  if not dp.is_active then
+    raise exception 'This delivery partner is not active.';
+  end if;
+  if dp.availability_status not in ('online', 'busy') then
+    raise exception 'This driver is not available (status: %).', dp.availability_status;
+  end if;
+  update public.orders
+  set delivery_partner_id = driver_partner_uuid,
+      status = 'Assigned',
+      status_history = coalesce(status_history, '[]'::jsonb) || jsonb_build_object(
+        'status',    'Assigned',
+        'note',      'Assigned to store driver: ' || dp.name,
+        'actor',     'vendor',
+        'timestamp', now()
+      )
+  where id = order_uuid;
+end;
+$$;
+grant execute on function public.vendor_assign_store_driver(uuid, uuid) to authenticated;
+
 grant execute on function public.driver_report_failed_delivery(uuid, text, text) to authenticated;

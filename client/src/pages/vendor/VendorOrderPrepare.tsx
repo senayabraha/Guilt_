@@ -6,6 +6,8 @@ import {
   CheckCircleIcon,
   InfoIcon,
   PackageCheckIcon,
+  TruckIcon,
+  UserIcon,
   XCircleIcon,
 } from "lucide-react";
 
@@ -18,7 +20,12 @@ import {
   startPreparingOrder,
   updateOrderItemPrepStatus,
 } from "../../lib/db/vendorOrders";
-import type { Order, OrderItem, OrderPrepStatus } from "../../types";
+import {
+  assignStoreDriverToOrder,
+  getStoreOwnedDrivers,
+  requestMarketplaceDriver,
+} from "../../lib/db/deliveryPartners";
+import type { DeliveryPartner, Order, OrderItem, OrderPrepStatus } from "../../types";
 import { formatCurrency } from "../../lib/format";
 
 const UNAVAILABLE_REASONS = [
@@ -47,6 +54,13 @@ export default function VendorOrderPrepare() {
   const [loading, setLoading] = useState(true);
   const [savingItemId, setSavingItemId] = useState<string | null>(null);
   const [completing, setCompleting] = useState(false);
+
+  // Dispatch state
+  const [dispatching, setDispatching] = useState(false);
+  const [marketplaceRequestPending, setMarketplaceRequestPending] = useState(false);
+  const [showDriverPicker, setShowDriverPicker] = useState(false);
+  const [storeDrivers, setStoreDrivers] = useState<DeliveryPartner[]>([]);
+  const [loadingDrivers, setLoadingDrivers] = useState(false);
 
   const loadOrder = async () => {
     if (!orderId) return;
@@ -171,9 +185,53 @@ export default function VendorOrderPrepare() {
     }
   };
 
+  const handleRequestMarketplaceDriver = async () => {
+    if (!orderId) return;
+    setDispatching(true);
+    try {
+      await requestMarketplaceDriver(orderId);
+      setMarketplaceRequestPending(true);
+      toast.success("Delivery request broadcast to marketplace drivers.");
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to request a driver");
+    } finally {
+      setDispatching(false);
+    }
+  };
+
+  const handleOpenDriverPicker = async () => {
+    if (!order?.storeId) return;
+    setShowDriverPicker(true);
+    setLoadingDrivers(true);
+    try {
+      setStoreDrivers(await getStoreOwnedDrivers(order.storeId));
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to load drivers");
+    } finally {
+      setLoadingDrivers(false);
+    }
+  };
+
+  const handleAssignStoreDriver = async (driverId: string) => {
+    if (!orderId) return;
+    setDispatching(true);
+    try {
+      await assignStoreDriverToOrder(orderId, driverId);
+      toast.success("Driver assigned successfully.");
+      setShowDriverPicker(false);
+      await loadOrder();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to assign driver");
+    } finally {
+      setDispatching(false);
+    }
+  };
+
   const isPartiallyAvailable = order?.status === "Partially Available";
   const isReadyOrCancelled =
-    order?.status === "Ready for Pickup" || order?.status === "Cancelled";
+    order?.status === "Ready for Pickup" ||
+    order?.status === "Assigned" ||
+    order?.status === "Cancelled";
 
   return (
     <div className="-mx-4 sm:mx-0 pb-28 sm:pb-8">
@@ -466,16 +524,143 @@ export default function VendorOrderPrepare() {
             </div>
           )}
 
-          {/* Ready state */}
-          {order.status === "Ready for Pickup" && (
-            <div className="mx-4 sm:mx-0 bg-green-50 border border-green-200 rounded-2xl p-5 flex items-center gap-4">
-              <CheckCircleIcon className="size-6 text-green-600 shrink-0" />
-              <div>
-                <p className="font-semibold text-green-900">Ready for pickup</p>
-                <p className="text-sm text-green-700 mt-0.5">
-                  A delivery partner will be assigned to collect this order.
-                </p>
+          {/* Ready / dispatch state */}
+          {(order.status === "Ready for Pickup" || order.status === "Assigned") && (
+            <div className="mx-4 sm:mx-0 space-y-3">
+              <div className="bg-green-50 border border-green-200 rounded-2xl p-5 flex items-center gap-4">
+                <CheckCircleIcon className="size-6 text-green-600 shrink-0" />
+                <div>
+                  <p className="font-semibold text-green-900">
+                    {order.status === "Assigned" ? "Driver assigned" : "Ready for pickup"}
+                  </p>
+                  <p className="text-sm text-green-700 mt-0.5">
+                    {order.status === "Assigned"
+                      ? "A delivery partner is on their way to collect this order."
+                      : "Order is packed and awaiting a delivery partner."}
+                  </p>
+                </div>
               </div>
+
+              {/* Driver dispatch panel — only when Ready for Pickup */}
+              {order.status === "Ready for Pickup" && (
+                order.deliveryPartner ? (
+                  <div className="bg-white border border-app-border rounded-2xl p-5">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-3">
+                      Assigned driver
+                    </p>
+                    <div className="flex items-center gap-3">
+                      <div className="size-10 rounded-full bg-app-green flex items-center justify-center shrink-0">
+                        <span className="text-white font-semibold">
+                          {order.deliveryPartner.name[0]}
+                        </span>
+                      </div>
+                      <div>
+                        <p className="font-semibold text-zinc-900">{order.deliveryPartner.name}</p>
+                        <p className="text-xs text-zinc-500 capitalize">
+                          {order.deliveryPartner.vehicleType} · {order.deliveryPartner.phone}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ) : marketplaceRequestPending ? (
+                  <div className="bg-blue-50 border border-blue-200 rounded-2xl p-5 flex items-center gap-3">
+                    <div className="size-5 border-2 border-blue-500 border-t-transparent rounded-full animate-spin shrink-0" />
+                    <div>
+                      <p className="font-semibold text-blue-900">Searching for a driver…</p>
+                      <p className="text-sm text-blue-700 mt-0.5">
+                        Request sent to the marketplace pool. A driver will accept shortly.
+                      </p>
+                    </div>
+                  </div>
+                ) : showDriverPicker ? (
+                  <div className="bg-white border border-app-border rounded-2xl overflow-hidden">
+                    <div className="px-5 py-3 border-b border-app-border flex items-center justify-between">
+                      <p className="font-semibold text-zinc-900 text-sm">Select a store driver</p>
+                      <button
+                        type="button"
+                        onClick={() => setShowDriverPicker(false)}
+                        className="text-xs text-zinc-400 hover:text-zinc-600"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                    {loadingDrivers ? (
+                      <div className="p-5 text-sm text-zinc-500">Loading available drivers…</div>
+                    ) : storeDrivers.length === 0 ? (
+                      <div className="p-5 text-sm text-zinc-500">
+                        No active store drivers are currently online.
+                      </div>
+                    ) : (
+                      <div className="divide-y divide-app-border">
+                        {storeDrivers.map((driver) => (
+                          <button
+                            key={driver.id || driver._id}
+                            type="button"
+                            disabled={dispatching}
+                            onClick={() => handleAssignStoreDriver(driver.id || driver._id)}
+                            className="w-full px-5 py-3.5 flex items-center gap-3 hover:bg-zinc-50 text-left disabled:opacity-60 transition-colors"
+                          >
+                            <div className="size-9 rounded-full bg-app-green flex items-center justify-center shrink-0">
+                              <span className="text-white text-sm font-semibold">
+                                {driver.name[0]}
+                              </span>
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-zinc-900 text-sm">{driver.name}</p>
+                              <p className="text-xs text-zinc-500 capitalize">
+                                {driver.vehicleType} · {driver.phone}
+                              </p>
+                            </div>
+                            <span
+                              className={`size-2 rounded-full shrink-0 ${
+                                driver.availabilityStatus === "online"
+                                  ? "bg-green-500"
+                                  : "bg-amber-400"
+                              }`}
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="bg-white border border-app-border rounded-2xl p-5">
+                    <p className="text-sm font-semibold text-zinc-900 mb-3">Assign delivery</p>
+                    <div className="space-y-2">
+                      <button
+                        type="button"
+                        disabled={dispatching}
+                        onClick={handleRequestMarketplaceDriver}
+                        className="w-full px-4 py-3.5 rounded-xl bg-app-green text-white text-sm font-semibold hover:bg-app-green/90 disabled:opacity-60 text-left flex items-start gap-3"
+                      >
+                        <TruckIcon className="size-4 shrink-0 mt-0.5" />
+                        <div>
+                          <p>Request Marketplace Driver</p>
+                          <p className="text-xs font-normal opacity-80 mt-0.5">
+                            Broadcast to available drivers in the marketplace pool
+                          </p>
+                        </div>
+                      </button>
+                      {order.store?.selfDeliveryEnabled && (
+                        <button
+                          type="button"
+                          disabled={dispatching}
+                          onClick={handleOpenDriverPicker}
+                          className="w-full px-4 py-3.5 rounded-xl border border-app-border text-sm font-semibold text-zinc-700 hover:bg-zinc-50 disabled:opacity-60 text-left flex items-start gap-3"
+                        >
+                          <UserIcon className="size-4 shrink-0 mt-0.5" />
+                          <div>
+                            <p>Assign Store Driver</p>
+                            <p className="text-xs font-normal text-zinc-400 mt-0.5">
+                              Directly assign one of your store's own delivery drivers
+                            </p>
+                          </div>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )
+              )}
             </div>
           )}
         </div>

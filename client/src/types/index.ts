@@ -18,6 +18,7 @@ export interface Store {
   categories: string[];
   status: StoreStatus;
   isOpen: boolean;
+  selfDeliveryEnabled?: boolean;
   deliveryRadius?: number;
   deliveryFee?: number;
   minOrder?: number;
@@ -149,6 +150,8 @@ export interface DeliveryPartner {
   vehicleType: "bike" | "scooter" | "car";
   isActive: boolean;
   availabilityStatus: DriverAvailabilityStatus;
+  partnerType: "marketplace" | "store_owned";
+  storeId?: string | null;
   lastSeenAt?: string | null;
   lastAvailableAt?: string | null;
   createdAt: string;

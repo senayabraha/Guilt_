@@ -13,7 +13,7 @@ import toast from "react-hot-toast";
 
 import Loading from "../../components/Loading";
 import { statusColors } from "../../assets/assets";
-import { getAdminStore, setStoreStatus } from "../../lib/db/stores";
+import { getAdminStore, setSelfDeliveryEnabled, setStoreStatus } from "../../lib/db/stores";
 import { formatCurrency } from "../../lib/format";
 
 const storeStatusColors: Record<string, string> = {
@@ -27,6 +27,7 @@ export default function AdminStoreDetail() {
   const [store, setStore] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [confirmSuspend, setConfirmSuspend] = useState(false);
+  const [togglingDelivery, setTogglingDelivery] = useState(false);
 
   const fetchStore = async () => {
     if (!id) return;
@@ -64,6 +65,24 @@ export default function AdminStoreDetail() {
       fetchStore();
     } catch (error: any) {
       toast.error(error?.message || "Failed to suspend store");
+    }
+  };
+
+  const handleToggleSelfDelivery = async () => {
+    if (!id) return;
+    setTogglingDelivery(true);
+    try {
+      await setSelfDeliveryEnabled(id, !store.selfDeliveryEnabled);
+      toast.success(
+        store.selfDeliveryEnabled
+          ? "Self-delivery disabled for this store."
+          : "Self-delivery enabled for this store.",
+      );
+      fetchStore();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to update self-delivery setting");
+    } finally {
+      setTogglingDelivery(false);
     }
   };
 
@@ -252,6 +271,42 @@ export default function AdminStoreDetail() {
             {formatCurrency(store.minOrder ?? 0)}
           </p>
         </div>
+      </div>
+
+      {/* Self-delivery settings */}
+      <div className="bg-white rounded-2xl border border-app-border p-5">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <p className="font-semibold text-zinc-900">Self-delivery</p>
+            <p className="text-sm text-zinc-500 mt-0.5">
+              Allow this store to assign their own drivers to orders. Store-owned
+              drivers must be onboarded by an admin with this store as their
+              linked store.
+            </p>
+          </div>
+          <button
+            type="button"
+            disabled={togglingDelivery}
+            onClick={handleToggleSelfDelivery}
+            className={`shrink-0 px-4 py-2 rounded-xl text-sm font-semibold transition-colors disabled:opacity-60 ${
+              store.selfDeliveryEnabled
+                ? "bg-red-50 text-red-600 hover:bg-red-100"
+                : "bg-app-green text-white hover:bg-app-green/90"
+            }`}
+          >
+            {togglingDelivery
+              ? "Updating…"
+              : store.selfDeliveryEnabled
+                ? "Disable Self-delivery"
+                : "Enable Self-delivery"}
+          </button>
+        </div>
+        {store.selfDeliveryEnabled && (
+          <div className="mt-3 px-3 py-2.5 rounded-xl bg-green-50 text-green-800 text-xs font-medium">
+            Self-delivery is active. This store can directly assign their own drivers from the
+            vendor prepare page.
+          </div>
+        )}
       </div>
 
       {/* Products */}

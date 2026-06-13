@@ -182,10 +182,49 @@ export async function createPartner(payload: {
   password: string;
   phone: string;
   vehicleType?: string;
+  partnerType?: "marketplace" | "store_owned";
+  storeId?: string | null;
 }): Promise<void> {
   const { error } = await supabase.functions.invoke(
     "admin-create-delivery-partner",
     { body: payload },
   );
+  if (error) throw error;
+}
+
+// Fetch active store-owned drivers for a specific store.
+export async function getStoreOwnedDrivers(
+  storeId: string,
+): Promise<DeliveryPartner[]> {
+  const { data, error } = await supabase
+    .from("delivery_partners")
+    .select("*")
+    .eq("partner_type", "store_owned")
+    .eq("store_id", storeId)
+    .eq("is_active", true)
+    .in("availability_status", ["online", "busy"])
+    .order("name");
+  if (error) throw error;
+  return (data ?? []).map(mapDeliveryPartner);
+}
+
+// Vendor: broadcast a marketplace delivery request for an order.
+export async function requestMarketplaceDriver(orderId: string): Promise<string> {
+  const { data, error } = await supabase.rpc("vendor_request_marketplace_driver", {
+    order_uuid: orderId,
+  });
+  if (error) throw error;
+  return data as string;
+}
+
+// Vendor: directly assign a store-owned driver to an order.
+export async function assignStoreDriverToOrder(
+  orderId: string,
+  driverId: string,
+): Promise<void> {
+  const { error } = await supabase.rpc("vendor_assign_store_driver", {
+    order_uuid: orderId,
+    driver_partner_uuid: driverId,
+  });
   if (error) throw error;
 }
