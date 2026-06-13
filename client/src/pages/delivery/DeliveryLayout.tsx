@@ -73,33 +73,28 @@ export default function DeliveryLayout() {
     <div className="min-h-screen bg-app-cream">
       {/* Top Bar */}
       <header className="bg-white border-b border-app-border sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <TruckIcon className="size-6 text-app-green" />
             <span className="text-lg font-semibold text-app-green">
               Zembil Delivery
             </span>
           </div>
-          <div className="flex items-center gap-3">
-            <span className="text-sm font-medium text-zinc-600">
-              {partner.name}
-            </span>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
-              aria-label="Log out of delivery account"
-            >
-              <LogOutIcon className="size-4" />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="p-2 text-zinc-500 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+            aria-label="Log out of delivery account"
+          >
+            <LogOutIcon className="size-4" />
+          </button>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col lg:flex-row gap-6">
-        <main className="flex-1 min-w-0">
-          <Outlet />
-        </main>
+      <div className="max-w-2xl mx-auto px-4 sm:px-6 py-5">
+        {/* Partner data flows to the dashboard via outlet context so the
+            dashboard does not need a second getMyPartner() call. */}
+        <Outlet context={{ partner }} />
       </div>
     </div>
   );
