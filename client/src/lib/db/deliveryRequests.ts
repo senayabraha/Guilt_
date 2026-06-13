@@ -52,9 +52,8 @@ export async function getMyDeliveryRequests(
 // Driver: accept a pending request.
 // The RPC assigns the driver to the order and generates the delivery OTP.
 export async function acceptDeliveryRequest(requestId: string): Promise<void> {
-  const { error } = await supabase.rpc("respond_to_delivery_request", {
+  const { error } = await supabase.rpc("accept_delivery_request", {
     request_uuid: requestId,
-    response: "accepted",
   });
   if (error) throw error;
 }
@@ -65,10 +64,9 @@ export async function rejectDeliveryRequest(
   requestId: string,
   reason?: string,
 ): Promise<void> {
-  const { error } = await supabase.rpc("respond_to_delivery_request", {
+  const { error } = await supabase.rpc("reject_delivery_request", {
     request_uuid: requestId,
-    response: "rejected",
-    p_reject_reason: reason ?? null,
+    reject_reason: reason ?? null,
   });
   if (error) throw error;
 }

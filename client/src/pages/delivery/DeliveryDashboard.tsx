@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useOutletContext } from "react-router-dom";
 import {
   AlertCircleIcon,
+  BellIcon,
   CircleIcon,
   NavigationIcon,
   PackageIcon,
@@ -12,8 +13,15 @@ import toast from "react-hot-toast";
 import OtpModal from "../../components/Delivery/OtpModal";
 import CancelModal from "../../components/Delivery/CancelModal";
 import DeliveryOrderCard from "../../components/Delivery/DeliveryOrderCard";
+import IncomingRequestCard from "../../components/Delivery/IncomingRequestCard";
+import RejectRequestModal from "../../components/Delivery/RejectRequestModal";
 import Loading from "../../components/Loading";
-import type { DeliveryPartner, DriverAvailabilityStatus, Order } from "../../types";
+import type {
+  DeliveryPartner,
+  DeliveryRequest,
+  DriverAvailabilityStatus,
+  Order,
+} from "../../types";
 import {
   getMyDeliveries,
   updateDeliveryLocation,
@@ -23,6 +31,12 @@ import {
   cancelDelivery,
   updateDriverAvailability,
 } from "../../lib/db/deliveryPartners";
+import {
+  getMyDeliveryRequests,
+  acceptDeliveryRequest,
+  rejectDeliveryRequest,
+} from "../../lib/db/deliveryRequests";
+import { supabase } from "../../lib/supabase";
 
 const STATUS_PRIORITY: Record<string, number> = {
   "Out for Delivery": 4,
@@ -40,34 +54,45 @@ function sortActive(orders: Order[]): Order[] {
 
 export default function DeliveryDashboard() {
   const { partner } = useOutletContext<{ partner: DeliveryPartner }>();
+  const partnerId = partner._id || partner.id!;
 
+  // ── Orders state ────────────────────────────────────────────
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [tab, setTab] = useState<"active" | "completed">("active");
+
+  // ── Tracking / GPS ──────────────────────────────────────────
   const [tracking, setTracking] = useState(false);
-  const [lastLocationUpdate, setLastLocationUpdate] = useState<Date | null>(
-    null,
-  );
+  const [lastLocationUpdate, setLastLocationUpdate] = useState<Date | null>(null);
+  const watchIdRef = useRef<number | null>(null);
+
+  // ── Availability ────────────────────────────────────────────
   const [availability, setAvailability] = useState<DriverAvailabilityStatus>(
     partner.availabilityStatus,
   );
   const [togglingAvail, setTogglingAvail] = useState(false);
 
+  // ── Delivery requests (incoming) ────────────────────────────
+  const [requests, setRequests] = useState<DeliveryRequest[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+  const [actioningRequest, setActioningRequest] = useState<string | null>(null);
+  const [rejectTarget, setRejectTarget] = useState<string | null>(null);
+  const [rejectingRequest, setRejectingRequest] = useState(false);
+
+  // ── Active delivery modals ───────────────────────────────────
   const [otpModal, setOtpModal] = useState<string | null>(null);
   const [otp, setOtp] = useState("");
   const [submitting, setSubmitting] = useState(false);
-
   const [cancelModal, setCancelModal] = useState<string | null>(null);
   const [cancelReason, setCancelReason] = useState("");
 
-  const watchIdRef = useRef<number | null>(null);
-
+  // ── Data fetching ────────────────────────────────────────────
   const fetchOrders = async () => {
     setLoading(true);
     setError(null);
     try {
-      const data = await getMyDeliveries(partner._id || partner.id!, tab);
+      const data = await getMyDeliveries(partnerId, tab);
       setOrders(tab === "active" ? sortActive(data) : data);
     } catch (err: any) {
       setError(err?.message || "Failed to load deliveries");
@@ -76,10 +101,59 @@ export default function DeliveryDashboard() {
     }
   };
 
+  const fetchRequests = async () => {
+    setRequestsLoading(true);
+    try {
+      setRequests(await getMyDeliveryRequests("pending"));
+    } catch {
+      // silently fail — requests are secondary to active deliveries
+    } finally {
+      setRequestsLoading(false);
+    }
+  };
+
+  // Initial load + tab-switch reload
   useEffect(() => {
     fetchOrders();
   }, [tab]);
 
+  // Fetch incoming requests once on mount + subscribe to realtime
+  useEffect(() => {
+    fetchRequests();
+
+    const channel = supabase
+      .channel(`driver-requests-${partnerId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "delivery_requests",
+          filter: `delivery_partner_id=eq.${partnerId}`,
+        },
+        () => {
+          fetchRequests();
+          toast("New delivery request incoming!", { icon: "🔔" });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "delivery_requests",
+          filter: `delivery_partner_id=eq.${partnerId}`,
+        },
+        () => fetchRequests(),
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [partnerId]);
+
+  // ── GPS location tracking ────────────────────────────────────
   useEffect(() => {
     const trackableOrders = orders.filter((o) =>
       ["Picked Up", "Out for Delivery"].includes(o.status),
@@ -122,6 +196,7 @@ export default function DeliveryDashboard() {
     };
   }, [orders, tracking]);
 
+  // ── Active delivery handlers ─────────────────────────────────
   const handleMarkPickedUp = async (orderId: string) => {
     try {
       await markDeliveryPickedUp(orderId);
@@ -174,6 +249,37 @@ export default function DeliveryDashboard() {
     }
   };
 
+  // ── Incoming request handlers ────────────────────────────────
+  const handleAcceptRequest = async (requestId: string) => {
+    setActioningRequest(requestId);
+    try {
+      await acceptDeliveryRequest(requestId);
+      toast.success("Request accepted — order assigned to you!");
+      // Refresh both: the request disappears, the order appears in Active
+      await Promise.all([fetchRequests(), fetchOrders()]);
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to accept request");
+    } finally {
+      setActioningRequest(null);
+    }
+  };
+
+  const handleRejectRequest = async (reason: string) => {
+    if (!rejectTarget) return;
+    setRejectingRequest(true);
+    try {
+      await rejectDeliveryRequest(rejectTarget, reason || undefined);
+      toast.success("Request rejected");
+      setRejectTarget(null);
+      fetchRequests();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to reject request");
+    } finally {
+      setRejectingRequest(false);
+    }
+  };
+
+  // ── Availability ─────────────────────────────────────────────
   const hasTrackableOrders = orders.some((o) =>
     ["Picked Up", "Out for Delivery"].includes(o.status),
   );
@@ -185,7 +291,9 @@ export default function DeliveryDashboard() {
     try {
       await updateDriverAvailability(next);
       setAvailability(next);
-      toast.success(next === "online" ? "You are now online" : "You are now offline");
+      toast.success(
+        next === "online" ? "You are now online" : "You are now offline",
+      );
     } catch (err: any) {
       toast.error(err?.message || "Failed to update availability");
     } finally {
@@ -208,7 +316,7 @@ export default function DeliveryDashboard() {
 
   return (
     <div className="space-y-5">
-      {/* Driver status header */}
+      {/* ── Driver status header ──────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-app-border overflow-hidden">
         {/* Row 1: name + location toggle */}
         <div className="px-5 py-4 flex items-center justify-between gap-4">
@@ -253,7 +361,7 @@ export default function DeliveryDashboard() {
           </button>
         </div>
 
-        {/* Row 2: availability toggle — clearly separate from location */}
+        {/* Row 2: availability toggle */}
         <div className="px-5 py-3 border-t border-app-border bg-zinc-50/60 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <span
@@ -293,7 +401,37 @@ export default function DeliveryDashboard() {
         </div>
       </div>
 
-      {/* Tabs */}
+      {/* ── Incoming Requests ─────────────────────────────────── */}
+      {(requestsLoading || requests.length > 0) && (
+        <div className="space-y-3">
+          <div className="flex items-center gap-2">
+            <BellIcon className="size-4 text-amber-500" />
+            <h2 className="text-sm font-semibold text-zinc-900">
+              Incoming Requests
+            </h2>
+            {requests.length > 0 && (
+              <span className="px-2 py-0.5 text-xs font-semibold bg-amber-100 text-amber-700 rounded-full">
+                {requests.length}
+              </span>
+            )}
+          </div>
+          {requestsLoading && requests.length === 0 ? (
+            <div className="h-20 bg-white rounded-2xl border border-app-border animate-pulse" />
+          ) : (
+            requests.map((req) => (
+              <IncomingRequestCard
+                key={req.id}
+                request={req}
+                onAccept={handleAcceptRequest}
+                onReject={(id) => setRejectTarget(id)}
+                actioning={actioningRequest === req.id}
+              />
+            ))
+          )}
+        </div>
+      )}
+
+      {/* ── Active / Completed Tabs ───────────────────────────── */}
       <div className="flex gap-2">
         {(["active", "completed"] as const).map((t) => (
           <button
@@ -310,7 +448,7 @@ export default function DeliveryDashboard() {
         ))}
       </div>
 
-      {/* Content */}
+      {/* ── Order list ────────────────────────────────────────── */}
       {loading ? (
         <Loading />
       ) : error ? (
@@ -368,6 +506,7 @@ export default function DeliveryDashboard() {
         </div>
       )}
 
+      {/* ── Modals ────────────────────────────────────────────── */}
       {otpModal && (
         <OtpModal
           setOtpModal={setOtpModal}
@@ -384,6 +523,13 @@ export default function DeliveryDashboard() {
           setCancelReason={setCancelReason}
           handleCancel={handleCancel}
           submitting={submitting}
+        />
+      )}
+      {rejectTarget && (
+        <RejectRequestModal
+          onClose={() => setRejectTarget(null)}
+          onConfirm={handleRejectRequest}
+          submitting={rejectingRequest}
         />
       )}
     </div>

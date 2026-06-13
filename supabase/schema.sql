@@ -1495,3 +1495,36 @@ end;
 $$;
 
 grant execute on function public.expire_pending_delivery_requests() to authenticated;
+
+-- ============================================================
+-- MIGRATION: driver_request_rpcs (20260613020000)
+-- ============================================================
+
+create or replace function public.accept_delivery_request(request_uuid uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.respond_to_delivery_request(request_uuid, 'accepted', null);
+end;
+$$;
+
+grant execute on function public.accept_delivery_request(uuid) to authenticated;
+
+create or replace function public.reject_delivery_request(
+  request_uuid  uuid,
+  reject_reason text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  perform public.respond_to_delivery_request(request_uuid, 'rejected', reject_reason);
+end;
+$$;
+
+grant execute on function public.reject_delivery_request(uuid, text) to authenticated;
