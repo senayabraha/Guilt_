@@ -9,6 +9,7 @@ import StatusState from "../../components/StatusState";
 import { statusColors } from "../../assets/assets";
 import { getMyStoreById } from "../../lib/db/stores";
 import { getStoreOrders } from "../../lib/db/orders";
+import { useStoreOrdersRealtime } from "../../hooks/useOrderRealtime";
 import { startPreparingOrder } from "../../lib/db/vendorOrders";
 import { formatCurrency } from "../../lib/format";
 import VendorOrderDetailModal from "../../components/vendor/VendorOrderDetailModal";
@@ -83,6 +84,9 @@ export default function VendorOrders() {
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter, storeId]);
+
+  // Realtime: any order INSERT/UPDATE for this store → silent refresh.
+  useStoreOrdersRealtime(storeId, () => fetchOrders(filterRef.current, false));
 
   if (!storeId) return <Navigate to="/vendor" replace />;
   if (storeMissing) return <Navigate to="/vendor" replace />;

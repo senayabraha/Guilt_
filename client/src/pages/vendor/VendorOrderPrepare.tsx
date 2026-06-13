@@ -25,8 +25,10 @@ import {
   getStoreOwnedDrivers,
   requestMarketplaceDriver,
 } from "../../lib/db/deliveryPartners";
-import type { DeliveryPartner, Order, OrderItem, OrderPrepStatus } from "../../types";
+import type { DeliveryPartner, DeliveryRequest, Order, OrderItem, OrderPrepStatus } from "../../types";
 import { formatCurrency } from "../../lib/format";
+import { getOrderDeliveryRequests } from "../../lib/db/deliveryRequests";
+import DeliveryTimeline from "../../components/vendor/DeliveryTimeline";
 
 const UNAVAILABLE_REASONS = [
   "Out of stock",
@@ -62,6 +64,10 @@ export default function VendorOrderPrepare() {
   const [storeDrivers, setStoreDrivers] = useState<DeliveryPartner[]>([]);
   const [loadingDrivers, setLoadingDrivers] = useState(false);
 
+  // Delivery requests (for timeline)
+  const [deliveryRequests, setDeliveryRequests] = useState<DeliveryRequest[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+
   const loadOrder = async () => {
     if (!orderId) return;
     setLoading(true);
@@ -83,6 +89,21 @@ export default function VendorOrderPrepare() {
     loadOrder();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderId]);
+
+  // Fetch delivery requests whenever the order enters a delivery phase.
+  useEffect(() => {
+    if (!orderId || !order) return;
+    const DELIVERY_PHASE = new Set([
+      "Ready for Pickup", "Assigned", "Picked Up",
+      "Out for Delivery", "Delivered", "Failed Delivery", "Cancelled",
+    ]);
+    if (!DELIVERY_PHASE.has(order.status)) return;
+    setRequestsLoading(true);
+    getOrderDeliveryRequests(orderId)
+      .then(setDeliveryRequests)
+      .catch(() => {})
+      .finally(() => setRequestsLoading(false));
+  }, [orderId, order?.status]);
 
   const items = order?.items ?? [];
   const pickedCount = items.filter((i) => i.prepStatus === "picked").length;
@@ -523,6 +544,21 @@ export default function VendorOrderPrepare() {
               </div>
             </div>
           )}
+
+          {/* Delivery timeline — visible once order enters the delivery phase */}
+          {deliveryRequests.length > 0 || requestsLoading ||
+            ["Ready for Pickup", "Assigned", "Picked Up", "Out for Delivery", "Delivered", "Failed Delivery"].includes(order.status) ? (
+            <div className="mx-4 sm:mx-0 bg-white rounded-2xl border border-app-border p-5">
+              <p className="text-xs font-semibold uppercase tracking-wide text-zinc-400 mb-4">
+                Delivery Status
+              </p>
+              <DeliveryTimeline
+                order={order}
+                requests={deliveryRequests}
+                loading={requestsLoading}
+              />
+            </div>
+          ) : null}
 
           {/* Ready / dispatch state */}
           {(order.status === "Ready for Pickup" || order.status === "Assigned") && (

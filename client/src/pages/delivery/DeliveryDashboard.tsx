@@ -30,7 +30,8 @@ import {
   acceptDeliveryRequest,
   rejectDeliveryRequest,
 } from "../../lib/db/deliveryRequests";
-import { supabase } from "../../lib/supabase";
+import { useDeliveryRequestsRealtime } from "../../hooks/useDeliveryRequestsRealtime";
+import { useDriverOrdersRealtime } from "../../hooks/useOrderRealtime";
 
 const STATUS_PRIORITY: Record<string, number> = {
   "Out for Delivery": 4,
@@ -104,41 +105,33 @@ export default function DeliveryDashboard() {
     fetchOrders();
   }, [tab]);
 
-  // Fetch incoming requests once on mount + subscribe to realtime
+  // Fetch incoming requests once on mount.
   useEffect(() => {
     fetchRequests();
-
-    const channel = supabase
-      .channel(`driver-requests-${partnerId}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "delivery_requests",
-          filter: `delivery_partner_id=eq.${partnerId}`,
-        },
-        () => {
-          fetchRequests();
-          toast("New delivery request incoming!", { icon: "🔔" });
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "delivery_requests",
-          filter: `delivery_partner_id=eq.${partnerId}`,
-        },
-        () => fetchRequests(),
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
   }, [partnerId]);
+
+  // Track current tab so realtime callbacks always use the latest value.
+  const tabRef = useRef(tab);
+  tabRef.current = tab;
+
+  // Realtime: new delivery request → notify + refresh request list.
+  useDeliveryRequestsRealtime(
+    partnerId,
+    () => {
+      fetchRequests();
+      toast("New delivery request incoming!", { icon: "🔔" });
+    },
+    fetchRequests,
+  );
+
+  // Realtime: order row updated (e.g., status change) → silent refresh.
+  useDriverOrdersRealtime(partnerId, async () => {
+    try {
+      const currentTab = tabRef.current;
+      const data = await getMyDeliveries(partnerId, currentTab);
+      setOrders(currentTab === "active" ? sortActive(data) : data);
+    } catch {}
+  });
 
   // ── GPS location tracking ────────────────────────────────────
   useEffect(() => {

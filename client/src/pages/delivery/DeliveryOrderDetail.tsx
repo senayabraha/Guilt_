@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useNavigate, useOutletContext, useParams } from "react-router-dom";
 import {
   AlertCircleIcon,
@@ -35,6 +35,7 @@ import {
 } from "../../lib/db/deliveryPartners";
 import { statusColors } from "../../assets/assets";
 import { formatCurrency } from "../../lib/format";
+import { useOrderRealtime } from "../../hooks/useOrderRealtime";
 
 // Driver-visible milestone steps (not every backend status)
 const TIMELINE_STEPS = [
@@ -314,9 +315,21 @@ export default function DeliveryOrderDetail() {
     }
   };
 
+  // Silent refetch for realtime updates — no loading spinner.
+  const silentRefetch = useCallback(async () => {
+    if (!orderId) return;
+    try {
+      const data = await getDeliveryDetail(partnerId, orderId);
+      if (data) setOrder(data);
+    } catch {}
+  }, [orderId, partnerId]);
+
   useEffect(() => {
     fetchOrder();
   }, [orderId]);
+
+  // Subscribe to realtime order updates (e.g., store marks Ready for Pickup).
+  useOrderRealtime(orderId, silentRefetch);
 
   // ── GPS tracking ─────────────────────────────────────────────────────────
   useEffect(() => {

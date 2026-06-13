@@ -16,6 +16,7 @@ import LiveMap from "../components/OrderTracking/LiveMap";
 import OrderTimeLine from "../components/OrderTracking/OrderTimeLine";
 import { statusColors } from "../assets/assets";
 import { getOrder, getOrderLocation } from "../lib/db/orders";
+import { useOrderRealtime } from "../hooks/useOrderRealtime";
 import { formatCurrency } from "../lib/format";
 
 // Human-readable context for each order status shown to the customer.
@@ -107,6 +108,15 @@ export default function OrderTracking() {
       .catch(() => navigate("/orders"))
       .finally(() => setLoading(false));
   }, [id, navigate]);
+
+  // Realtime: order status changes pushed from the server → silent refresh.
+  useOrderRealtime(id, async () => {
+    if (!id) return;
+    try {
+      const fresh = await getOrder(id);
+      if (fresh) setOrder(fresh);
+    } catch {}
+  });
 
   // Poll live location every 10 s during active delivery phases.
   useEffect(() => {

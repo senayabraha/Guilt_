@@ -1782,4 +1782,20 @@ end;
 $$;
 grant execute on function public.vendor_assign_store_driver(uuid, uuid) to authenticated;
 
+-- ============================================================
+-- Migration 20260613050000: enable realtime on orders table
+-- ============================================================
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname  = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename  = 'orders'
+     ) then
+    alter publication supabase_realtime add table public.orders;
+  end if;
+end $$;
+
 grant execute on function public.driver_report_failed_delivery(uuid, text, text) to authenticated;

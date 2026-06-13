@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import {
   ExternalLinkIcon,
   MapPinIcon,
@@ -8,7 +9,9 @@ import {
 
 import { statusColors } from "../../assets/assets";
 import { formatCurrency } from "../../lib/format";
-import type { Order, OrderItem } from "../../types";
+import type { DeliveryRequest, Order, OrderItem } from "../../types";
+import { getOrderDeliveryRequests } from "../../lib/db/deliveryRequests";
+import DeliveryTimeline from "./DeliveryTimeline";
 
 interface Props {
   order: Order;
@@ -63,6 +66,16 @@ const actionLabel = (status: string) => {
   return null;
 };
 
+const DELIVERY_PHASE = new Set([
+  "Ready for Pickup",
+  "Assigned",
+  "Picked Up",
+  "Out for Delivery",
+  "Delivered",
+  "Failed Delivery",
+  "Cancelled",
+]);
+
 const VendorOrderDetailModal = ({
   order,
   actionLoading = false,
@@ -80,6 +93,19 @@ const VendorOrderDetailModal = ({
     order.status === "Confirmed" ||
     order.status === "Preparing" ||
     order.status === "Partially Available";
+
+  const isDeliveryPhase = DELIVERY_PHASE.has(order.status);
+  const [requests, setRequests] = useState<DeliveryRequest[]>([]);
+  const [requestsLoading, setRequestsLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isDeliveryPhase) return;
+    setRequestsLoading(true);
+    getOrderDeliveryRequests(id)
+      .then(setRequests)
+      .catch(() => {})
+      .finally(() => setRequestsLoading(false));
+  }, [id, order.status]);
 
   return (
     <div
@@ -283,6 +309,13 @@ const VendorOrderDetailModal = ({
                   <p className="text-sm text-zinc-500">No reason recorded</p>
                 );
               })()}
+            </section>
+          )}
+
+          {isDeliveryPhase && (
+            <section className="rounded-2xl border border-app-border p-4">
+              <h3 className="text-base font-semibold text-zinc-900 mb-4">Delivery Status</h3>
+              <DeliveryTimeline order={order} requests={requests} loading={requestsLoading} />
             </section>
           )}
 
