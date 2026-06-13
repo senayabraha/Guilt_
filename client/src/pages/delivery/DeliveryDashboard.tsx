@@ -12,8 +12,10 @@ import {
   getMyDeliveries,
   updateDeliveryLocation,
   completeDelivery,
+  markDeliveryPickedUp,
+  markDeliveryOutForDelivery,
+  cancelDelivery,
 } from "../../lib/db/deliveryPartners";
-import { updateOrderStatus } from "../../lib/db/orders";
 
 export default function DeliveryDashboard() {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -103,17 +105,23 @@ export default function DeliveryDashboard() {
     };
   }, [orders, tracking]);
 
-  const handleUpdateStatus = async (orderId: string, status: string) => {
-    if (!["Picked Up", "Out for Delivery"].includes(status)) {
-      toast.error("Delivery partners can only update pickup and delivery progress.");
-      return;
-    }
+  const handleMarkPickedUp = async (orderId: string) => {
     try {
-      await updateOrderStatus(orderId, status);
-      toast.success(`Status updated to ${status}`);
+      await markDeliveryPickedUp(orderId);
+      toast.success("Marked as Picked Up");
       fetchOrders();
     } catch (error: any) {
-      toast.error(error?.message || "Failed");
+      toast.error(error?.message || "Failed to mark as picked up");
+    }
+  };
+
+  const handleMarkOutForDelivery = async (orderId: string) => {
+    try {
+      await markDeliveryOutForDelivery(orderId);
+      toast.success("Marked as Out for Delivery");
+      fetchOrders();
+    } catch (error: any) {
+      toast.error(error?.message || "Failed to mark as out for delivery");
     }
   };
 
@@ -137,13 +145,13 @@ export default function DeliveryDashboard() {
     if (!cancelModal) return;
     setSubmitting(true);
     try {
-      await updateOrderStatus(cancelModal, "Cancelled", cancelReason);
+      await cancelDelivery(cancelModal, cancelReason);
       toast.success("Delivery cancelled");
       setCancelModal(null);
       setCancelReason("");
       fetchOrders();
     } catch (error: any) {
-      toast.error(error?.message || "Failed");
+      toast.error(error?.message || "Failed to cancel delivery");
     } finally {
       setSubmitting(false);
     }
@@ -197,7 +205,8 @@ export default function DeliveryDashboard() {
               key={order.id}
               order={order}
               tab={tab}
-              handleUpdateStatus={handleUpdateStatus}
+              onMarkPickedUp={handleMarkPickedUp}
+              onMarkOutForDelivery={handleMarkOutForDelivery}
               setOtpModal={setOtpModal}
               setCancelModal={setCancelModal}
             />

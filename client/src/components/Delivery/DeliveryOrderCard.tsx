@@ -15,7 +15,8 @@ import { formatCurrency } from "../../lib/format";
 interface DeliveryOrderCardProps {
   order: Order;
   tab: "active" | "completed";
-  handleUpdateStatus: (orderId: string, status: string) => void;
+  onMarkPickedUp: (orderId: string) => void;
+  onMarkOutForDelivery: (orderId: string) => void;
   setOtpModal: (orderId: string) => void;
   setCancelModal: (orderId: string) => void;
 }
@@ -23,7 +24,8 @@ interface DeliveryOrderCardProps {
 export default function DeliveryOrderCard({
   order,
   tab,
-  handleUpdateStatus,
+  onMarkPickedUp,
+  onMarkOutForDelivery,
   setOtpModal,
   setCancelModal,
 }: DeliveryOrderCardProps) {
@@ -137,18 +139,22 @@ export default function DeliveryOrderCard({
       {/* Actions */}
       {tab === "active" && (
         <div className="px-5 py-3 border-t border-app-border flex flex-wrap gap-2">
-          {(order.status === "Ready for Pickup" || order.status === "Picked Up") && (
+          {order.status === "Ready for Pickup" && (
             <button
-              onClick={() =>
-                handleUpdateStatus(
-                  order._id,
-                  order.status === "Ready for Pickup" ? "Picked Up" : "Out for Delivery",
-                )
-              }
+              onClick={() => onMarkPickedUp(order._id)}
               className="px-4 py-2 text-sm font-medium bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 transition-colors flex items-center gap-1.5"
             >
               <TruckIcon className="w-3.5 h-3.5" />
-              {order.status === "Ready for Pickup" ? "Mark Picked Up" : "Out for Delivery"}
+              Mark Picked Up
+            </button>
+          )}
+          {order.status === "Picked Up" && (
+            <button
+              onClick={() => onMarkOutForDelivery(order._id)}
+              className="px-4 py-2 text-sm font-medium bg-blue-50 text-blue-700 rounded-xl hover:bg-blue-100 transition-colors flex items-center gap-1.5"
+            >
+              <TruckIcon className="w-3.5 h-3.5" />
+              Out for Delivery
             </button>
           )}
           {!["Ready for Pickup", "Picked Up", "Out for Delivery", "Delivered", "Cancelled"].includes(order.status) && (

@@ -46,7 +46,7 @@ export default function CancelModal({
             </button>
             <button
               onClick={handleCancel}
-              disabled={submitting}
+              disabled={submitting || !cancelReason.trim()}
               className="flex-1 py-2.5 text-sm font-medium text-white bg-red-600 rounded-xl hover:bg-red-700 transition-colors disabled:opacity-50"
             >
               {submitting ? "Cancelling..." : "Confirm Cancel"}

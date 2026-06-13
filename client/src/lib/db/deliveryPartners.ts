@@ -2,6 +2,7 @@ import { supabase } from "../supabase";
 import { mapDeliveryPartner, mapOrder } from "./mappers";
 import type { DeliveryPartner, Order } from "../../types";
 import { notifyOrderStatusChanged } from "./notifications";
+import { updateOrderStatus } from "./orders";
 
 const PICKUP_FULL =
   "*, store:stores(*), user:profiles(id, name, email, phone)";
@@ -73,6 +74,28 @@ export async function completeDelivery(id: string, otp: string): Promise<void> {
   notifyOrderStatusChanged(id, "Delivered").catch((err) =>
     console.warn("Failed to create delivery completion notification", err),
   );
+}
+
+// --- Driver delivery actions ---
+// These wrappers own the driver status-transition vocabulary. Internally they
+// delegate to updateOrderStatus() for now; in Phase 2 each will become its own
+// server-side RPC (driver_mark_picked_up, driver_cancel_delivery, etc.) without
+// requiring changes to any calling component.
+
+export async function markDeliveryPickedUp(orderId: string): Promise<void> {
+  await updateOrderStatus(orderId, "Picked Up");
+}
+
+export async function markDeliveryOutForDelivery(orderId: string): Promise<void> {
+  await updateOrderStatus(orderId, "Out for Delivery");
+}
+
+export async function cancelDelivery(
+  orderId: string,
+  reason: string,
+): Promise<void> {
+  if (!reason.trim()) throw new Error("Cancellation reason is required.");
+  await updateOrderStatus(orderId, "Cancelled", reason);
 }
 
 // --- Admin management ---
