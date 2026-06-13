@@ -1208,3 +1208,290 @@ end;
 $$;
 
 grant execute on function public.set_driver_availability(text) to authenticated;
+
+-- ============================================================
+-- MIGRATION: delivery_requests (20260613010000)
+-- ============================================================
+
+create table public.delivery_requests (
+  id                  uuid        primary key default gen_random_uuid(),
+  order_id            uuid        not null
+    references public.orders(id)           on delete cascade,
+  delivery_partner_id uuid
+    references public.delivery_partners(id) on delete set null,
+  requested_by        uuid
+    references public.profiles(id)          on delete set null,
+  requested_by_role   text        not null
+    check (requested_by_role in ('ADMIN', 'VENDOR')),
+  status              text        not null default 'pending'
+    check (status in ('pending', 'accepted', 'rejected', 'expired', 'cancelled')),
+  reject_reason       text,
+  order_snapshot      jsonb,
+  expires_at          timestamptz,
+  responded_at        timestamptz,
+  created_at          timestamptz not null default now(),
+  updated_at          timestamptz not null default now()
+);
+
+create index delivery_requests_order_id_idx
+  on public.delivery_requests(order_id);
+create index delivery_requests_partner_status_idx
+  on public.delivery_requests(delivery_partner_id, status);
+create index delivery_requests_status_expires_idx
+  on public.delivery_requests(status, expires_at)
+  where status = 'pending';
+create unique index delivery_requests_one_accepted_per_order
+  on public.delivery_requests(order_id)
+  where status = 'accepted';
+
+create trigger delivery_requests_set_updated_at
+before update on public.delivery_requests
+for each row execute function public.set_updated_at();
+
+alter table public.delivery_requests enable row level security;
+
+do $$
+begin
+  if exists (select 1 from pg_publication where pubname = 'supabase_realtime')
+     and not exists (
+       select 1 from pg_publication_tables
+       where pubname  = 'supabase_realtime'
+         and schemaname = 'public'
+         and tablename  = 'delivery_requests'
+     ) then
+    alter publication supabase_realtime add table public.delivery_requests;
+  end if;
+end $$;
+
+create policy "delivery requests select allowed"
+on public.delivery_requests
+for select
+using (
+  public.is_admin()
+  or public.is_assigned_partner(delivery_partner_id)
+  or exists (
+    select 1
+    from public.orders o
+    join public.stores s on s.id = o.store_id
+    where o.id = delivery_requests.order_id
+      and s.owner_id = auth.uid()
+  )
+);
+
+create policy "delivery requests admin manage"
+on public.delivery_requests
+for all
+using  (public.is_admin())
+with check (public.is_admin());
+
+create or replace function public.create_delivery_request(
+  order_uuid      uuid,
+  partner_uuid    uuid,
+  expires_minutes integer default 10
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ord             public.orders%rowtype;
+  dp              public.delivery_partners%rowtype;
+  st              public.stores%rowtype;
+  caller_role     public.user_role;
+  partner_user    uuid;
+  new_request_id  uuid;
+  snap            jsonb;
+begin
+  select role into caller_role from public.profiles where id = auth.uid();
+  if caller_role not in ('ADMIN', 'VENDOR') then
+    raise exception 'Only admins and vendors can create delivery requests';
+  end if;
+
+  select * into ord from public.orders where id = order_uuid;
+  if ord.id is null then raise exception 'Order not found'; end if;
+  if ord.status in ('Delivered', 'Cancelled') then
+    raise exception 'Cannot dispatch a delivered or cancelled order';
+  end if;
+
+  if caller_role = 'VENDOR' then
+    if not exists (
+      select 1 from public.stores s
+      where s.id = ord.store_id and s.owner_id = auth.uid()
+    ) then
+      raise exception 'Not authorized: you do not own this order''s store';
+    end if;
+  end if;
+
+  select * into dp from public.delivery_partners where id = partner_uuid;
+  if dp.id is null then raise exception 'Delivery partner not found'; end if;
+  if not dp.is_active then raise exception 'Delivery partner account is inactive'; end if;
+
+  if exists (
+    select 1 from public.delivery_requests
+    where order_id           = order_uuid
+      and delivery_partner_id = partner_uuid
+      and status in ('pending', 'accepted')
+  ) then
+    raise exception 'An active request already exists for this driver and order';
+  end if;
+
+  select * into st from public.stores where id = ord.store_id;
+  snap := jsonb_build_object(
+    'storeId',      coalesce(ord.store_id::text, ''),
+    'storeName',    coalesce(st.name, 'Unknown store'),
+    'storeAddress', coalesce(st.address || ', ' || st.city, ''),
+    'itemCount',    jsonb_array_length(ord.items),
+    'total',        ord.total,
+    'deliveryArea', coalesce(ord.shipping_address->>'state', ord.shipping_address->>'city', '')
+  );
+
+  insert into public.delivery_requests (
+    order_id, delivery_partner_id, requested_by, requested_by_role,
+    status, order_snapshot, expires_at
+  ) values (
+    order_uuid, partner_uuid, auth.uid(), caller_role::text, 'pending', snap,
+    case when expires_minutes > 0
+         then now() + (expires_minutes || ' minutes')::interval
+         else null end
+  )
+  returning id into new_request_id;
+
+  select auth_user_id into partner_user
+  from public.delivery_partners where id = partner_uuid;
+
+  if partner_user is not null then
+    perform public.insert_notification(
+      partner_user, 'DELIVERY', 'delivery.new_request', 'New delivery request',
+      'You have a new delivery request for order #' || upper(right(order_uuid::text, 6)) || '.',
+      'delivery_request', new_request_id
+    );
+  end if;
+
+  return new_request_id;
+end;
+$$;
+
+grant execute on function public.create_delivery_request(uuid, uuid, integer) to authenticated;
+
+create or replace function public.respond_to_delivery_request(
+  request_uuid    uuid,
+  response        text,
+  p_reject_reason text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  req         public.delivery_requests%rowtype;
+  dp          public.delivery_partners%rowtype;
+  ord         public.orders%rowtype;
+  new_otp     text;
+  admin_rec   record;
+  short_id    text;
+begin
+  if response not in ('accepted', 'rejected') then
+    raise exception 'response must be ''accepted'' or ''rejected''';
+  end if;
+
+  select * into dp from public.delivery_partners where auth_user_id = auth.uid();
+  if dp.id is null then raise exception 'Delivery partner record not found for this user'; end if;
+
+  select * into req from public.delivery_requests where id = request_uuid for update;
+  if req.id is null then raise exception 'Delivery request not found'; end if;
+
+  if req.delivery_partner_id is distinct from dp.id then
+    raise exception 'Not authorized: this request was not sent to you';
+  end if;
+
+  if req.status <> 'pending' then
+    raise exception 'Request is no longer pending (current status: %)', req.status;
+  end if;
+
+  if req.expires_at is not null and req.expires_at < now() then
+    update public.delivery_requests set status = 'expired' where id = request_uuid;
+    raise exception 'This delivery request has expired';
+  end if;
+
+  short_id := upper(right(req.order_id::text, 6));
+
+  if response = 'accepted' then
+    new_otp := floor(random() * 900000 + 100000)::int::text;
+
+    update public.delivery_requests
+    set status = 'accepted', responded_at = now()
+    where id = request_uuid;
+
+    update public.delivery_requests
+    set status = 'cancelled'
+    where order_id = req.order_id and id <> request_uuid and status = 'pending';
+
+    select * into ord from public.orders where id = req.order_id;
+    update public.orders
+    set delivery_partner_id = dp.id,
+        delivery_otp        = new_otp,
+        status              = case
+                                when ord.status in (
+                                  'Placed', 'Confirmed', 'Preparing',
+                                  'Partially Available', 'Ready for Pickup'
+                                ) then 'Assigned'
+                                else ord.status
+                              end,
+        status_history      = coalesce(status_history, '[]'::jsonb)
+          || jsonb_build_object('status', 'Assigned', 'note', 'Driver accepted delivery request',
+                                'actor', 'delivery_partner', 'timestamp', now())
+    where id = req.order_id;
+
+    perform public.insert_notification(
+      ord.user_id, 'CUSTOMER', 'customer.delivery_assigned', 'Delivery partner assigned',
+      'A delivery partner has been assigned to your order #' || short_id || '.',
+      'order', req.order_id
+    );
+
+    for admin_rec in select id from public.profiles where role = 'ADMIN' loop
+      perform public.insert_notification(
+        admin_rec.id, 'ADMIN', 'admin.delivery_request_accepted', 'Driver accepted request',
+        dp.name || ' accepted the delivery request for order #' || short_id || '.',
+        'delivery_request', request_uuid
+      );
+    end loop;
+
+  else
+    update public.delivery_requests
+    set status = 'rejected', responded_at = now(), reject_reason = coalesce(p_reject_reason, '')
+    where id = request_uuid;
+
+    for admin_rec in select id from public.profiles where role = 'ADMIN' loop
+      perform public.insert_notification(
+        admin_rec.id, 'ADMIN', 'admin.delivery_request_rejected', 'Driver rejected request',
+        dp.name || ' rejected the request for order #' || short_id || '.'
+          || case when p_reject_reason is not null and trim(p_reject_reason) <> ''
+                  then ' Reason: ' || p_reject_reason else '' end,
+        'delivery_request', request_uuid
+      );
+    end loop;
+  end if;
+end;
+$$;
+
+grant execute on function public.respond_to_delivery_request(uuid, text, text) to authenticated;
+
+create or replace function public.expire_pending_delivery_requests()
+returns integer
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare n integer;
+begin
+  update public.delivery_requests
+  set status = 'expired'
+  where status = 'pending' and expires_at is not null and expires_at < now();
+  get diagnostics n = row_count;
+  return n;
+end;
+$$;
+
+grant execute on function public.expire_pending_delivery_requests() to authenticated;

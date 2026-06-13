@@ -108,6 +108,37 @@ export interface OrderItem {
 
 export type DriverAvailabilityStatus = "offline" | "online" | "busy" | "unavailable";
 
+export type DeliveryRequestStatus =
+  | "pending"
+  | "accepted"
+  | "rejected"
+  | "expired"
+  | "cancelled";
+
+export interface DeliveryRequestSnapshot {
+  storeId: string;
+  storeName: string;
+  storeAddress: string;
+  itemCount: number;
+  total: number;
+  deliveryArea: string;
+}
+
+export interface DeliveryRequest {
+  id: string;
+  orderId: string;
+  deliveryPartnerId: string | null;
+  requestedBy: string | null;
+  requestedByRole: "ADMIN" | "VENDOR";
+  status: DeliveryRequestStatus;
+  rejectReason: string | null;
+  orderSnapshot: DeliveryRequestSnapshot | null;
+  expiresAt: string | null;
+  respondedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface DeliveryPartner {
   _id: string;
   id?: string;
