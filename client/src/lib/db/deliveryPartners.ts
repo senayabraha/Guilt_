@@ -2,7 +2,6 @@ import { supabase } from "../supabase";
 import { mapDeliveryPartner, mapOrder } from "./mappers";
 import type { DeliveryPartner, Order } from "../../types";
 import { notifyOrderStatusChanged } from "./notifications";
-import { updateOrderStatus } from "./orders";
 
 const PICKUP_FULL =
   "*, store:stores(*), user:profiles(id, name, email, phone)";
@@ -77,17 +76,29 @@ export async function completeDelivery(id: string, otp: string): Promise<void> {
 }
 
 // --- Driver delivery actions ---
-// These wrappers own the driver status-transition vocabulary. Internally they
-// delegate to updateOrderStatus() for now; in Phase 2 each will become its own
-// server-side RPC (driver_mark_picked_up, driver_cancel_delivery, etc.) without
-// requiring changes to any calling component.
+// Each function calls its own server-side RPC (security definer) which
+// validates the caller is the assigned partner and enforces the allowed
+// status transition.  Notifications are fired client-side after the RPC
+// succeeds, matching the pattern used by completeDelivery.
 
 export async function markDeliveryPickedUp(orderId: string): Promise<void> {
-  await updateOrderStatus(orderId, "Picked Up");
+  const { error } = await supabase.rpc("driver_mark_picked_up", {
+    order_uuid: orderId,
+  });
+  if (error) throw error;
+  notifyOrderStatusChanged(orderId, "Picked Up").catch((err) =>
+    console.warn("Failed to create status notification", err),
+  );
 }
 
 export async function markDeliveryOutForDelivery(orderId: string): Promise<void> {
-  await updateOrderStatus(orderId, "Out for Delivery");
+  const { error } = await supabase.rpc("driver_mark_out_for_delivery", {
+    order_uuid: orderId,
+  });
+  if (error) throw error;
+  notifyOrderStatusChanged(orderId, "Out for Delivery").catch((err) =>
+    console.warn("Failed to create status notification", err),
+  );
 }
 
 export async function cancelDelivery(
@@ -95,7 +106,14 @@ export async function cancelDelivery(
   reason: string,
 ): Promise<void> {
   if (!reason.trim()) throw new Error("Cancellation reason is required.");
-  await updateOrderStatus(orderId, "Cancelled", reason);
+  const { error } = await supabase.rpc("driver_cancel_delivery", {
+    order_uuid: orderId,
+    cancel_reason: reason,
+  });
+  if (error) throw error;
+  notifyOrderStatusChanged(orderId, "Cancelled").catch((err) =>
+    console.warn("Failed to create status notification", err),
+  );
 }
 
 // --- Admin management ---

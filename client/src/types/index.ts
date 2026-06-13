@@ -132,7 +132,7 @@ export interface Order {
   tax: number;
   total: number;
   status: string;
-  statusHistory: { status: string; timestamp: string; note: string }[];
+  statusHistory: { status: string; timestamp: string; note: string; actor?: string }[];
   deliveryPartner: DeliveryPartner | null;
   deliveryOtp: string;
   isPaid: boolean;

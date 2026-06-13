@@ -958,3 +958,202 @@ begin
   return new_order_id;
 end;
 $$;
+
+-- ============================================================
+-- Driver status-transition RPCs
+-- Each function follows the same security pattern as
+-- complete_delivery: security definer, explicit caller-is-
+-- assigned-partner check, allowed-transition guard, and an
+-- appended status_history entry that includes an actor field.
+-- ============================================================
+
+-- driver_mark_picked_up: transitions an order from Assigned or
+-- Ready for Pickup to Picked Up.
+--
+-- Allows Assigned → Picked Up because admin may assign a driver
+-- to an order that has already been physically prepared but not
+-- yet marked Ready for Pickup through the vendor UI.  This
+-- assumption should be revisited once vendor-dispatch is live
+-- (Phase 3) and vendors control the dispatch trigger.
+create or replace function public.driver_mark_picked_up(order_uuid uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ord public.orders%rowtype;
+begin
+  select * into ord from public.orders where id = order_uuid;
+  if ord.id is null then
+    raise exception 'Order not found';
+  end if;
+  if not exists (
+    select 1 from public.delivery_partners dp
+    where dp.id = ord.delivery_partner_id
+      and dp.auth_user_id = auth.uid()
+  ) then
+    raise exception 'Not authorized';
+  end if;
+  if ord.status in ('Delivered', 'Cancelled') then
+    raise exception 'Order is already complete';
+  end if;
+  if ord.status not in ('Assigned', 'Ready for Pickup') then
+    raise exception 'Order must be Assigned or Ready for Pickup before pickup can be confirmed';
+  end if;
+  update public.orders
+  set status = 'Picked Up',
+      status_history = coalesce(status_history, '[]'::jsonb)
+        || jsonb_build_object(
+             'status',    'Picked Up',
+             'note',      'Order picked up by delivery partner',
+             'actor',     'delivery_partner',
+             'timestamp', now()
+           )
+  where id = order_uuid;
+end;
+$$;
+
+grant execute on function public.driver_mark_picked_up(uuid) to authenticated;
+
+-- driver_mark_out_for_delivery: transitions an order from
+-- Picked Up to Out for Delivery.
+create or replace function public.driver_mark_out_for_delivery(order_uuid uuid)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ord public.orders%rowtype;
+begin
+  select * into ord from public.orders where id = order_uuid;
+  if ord.id is null then
+    raise exception 'Order not found';
+  end if;
+  if not exists (
+    select 1 from public.delivery_partners dp
+    where dp.id = ord.delivery_partner_id
+      and dp.auth_user_id = auth.uid()
+  ) then
+    raise exception 'Not authorized';
+  end if;
+  if ord.status in ('Delivered', 'Cancelled') then
+    raise exception 'Order is already complete';
+  end if;
+  if ord.status <> 'Picked Up' then
+    raise exception 'Order must be Picked Up before it can be marked Out for Delivery';
+  end if;
+  update public.orders
+  set status = 'Out for Delivery',
+      status_history = coalesce(status_history, '[]'::jsonb)
+        || jsonb_build_object(
+             'status',    'Out for Delivery',
+             'note',      'Order is out for delivery',
+             'actor',     'delivery_partner',
+             'timestamp', now()
+           )
+  where id = order_uuid;
+end;
+$$;
+
+grant execute on function public.driver_mark_out_for_delivery(uuid) to authenticated;
+
+-- driver_cancel_delivery: cancels a delivery that is currently
+-- in an active driver state.  Requires a non-empty reason.
+-- Cancellable states: Assigned, Ready for Pickup, Picked Up,
+-- Out for Delivery.
+create or replace function public.driver_cancel_delivery(order_uuid uuid, cancel_reason text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ord public.orders%rowtype;
+begin
+  select * into ord from public.orders where id = order_uuid;
+  if ord.id is null then
+    raise exception 'Order not found';
+  end if;
+  if not exists (
+    select 1 from public.delivery_partners dp
+    where dp.id = ord.delivery_partner_id
+      and dp.auth_user_id = auth.uid()
+  ) then
+    raise exception 'Not authorized';
+  end if;
+  if ord.status in ('Delivered', 'Cancelled') then
+    raise exception 'Order is already complete';
+  end if;
+  if ord.status not in ('Assigned', 'Ready for Pickup', 'Picked Up', 'Out for Delivery') then
+    raise exception 'Order cannot be cancelled from its current state';
+  end if;
+  if cancel_reason is null or trim(cancel_reason) = '' then
+    raise exception 'Cancellation reason is required';
+  end if;
+  update public.orders
+  set status = 'Cancelled',
+      status_history = coalesce(status_history, '[]'::jsonb)
+        || jsonb_build_object(
+             'status',    'Cancelled',
+             'note',      cancel_reason,
+             'actor',     'delivery_partner',
+             'timestamp', now()
+           )
+  where id = order_uuid;
+end;
+$$;
+
+grant execute on function public.driver_cancel_delivery(uuid, text) to authenticated;
+
+-- driver_report_failed_delivery: records a delivery failure
+-- after pickup.  The current status model has no dedicated
+-- Failed status, so this sets the order to Cancelled with a
+-- note that distinguishes it from a voluntary cancellation.
+-- Phase 2 should introduce a distinct Failed status and a
+-- failure_reason column before this function is used in
+-- production.
+create or replace function public.driver_report_failed_delivery(order_uuid uuid, failure_reason text)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ord public.orders%rowtype;
+begin
+  select * into ord from public.orders where id = order_uuid;
+  if ord.id is null then
+    raise exception 'Order not found';
+  end if;
+  if not exists (
+    select 1 from public.delivery_partners dp
+    where dp.id = ord.delivery_partner_id
+      and dp.auth_user_id = auth.uid()
+  ) then
+    raise exception 'Not authorized';
+  end if;
+  if ord.status in ('Delivered', 'Cancelled') then
+    raise exception 'Order is already complete';
+  end if;
+  if ord.status not in ('Picked Up', 'Out for Delivery') then
+    raise exception 'Delivery failure can only be reported after pickup';
+  end if;
+  if failure_reason is null or trim(failure_reason) = '' then
+    raise exception 'Failure reason is required';
+  end if;
+  update public.orders
+  set status = 'Cancelled',
+      status_history = coalesce(status_history, '[]'::jsonb)
+        || jsonb_build_object(
+             'status',    'Cancelled',
+             'note',      'Delivery failed: ' || failure_reason,
+             'actor',     'delivery_partner',
+             'timestamp', now()
+           )
+  where id = order_uuid;
+end;
+$$;
+
+grant execute on function public.driver_report_failed_delivery(uuid, text) to authenticated;
