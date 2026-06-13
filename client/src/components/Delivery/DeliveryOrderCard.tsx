@@ -153,7 +153,9 @@ export default function DeliveryOrderCard({
           )}
           {!["Ready for Pickup", "Picked Up", "Out for Delivery", "Delivered", "Cancelled"].includes(order.status) && (
             <p className="px-3 py-2 rounded-xl bg-amber-50 text-amber-800 text-xs font-medium">
-              Store must mark this order Ready for Pickup before pickup.
+              {order.status === "Assigned"
+                ? "Assigned — waiting for the store to mark this order Ready for Pickup."
+                : "Store must mark this order Ready for Pickup before pickup."}
             </p>
           )}
           {order.status === "Out for Delivery" && (
