@@ -235,6 +235,57 @@ const VendorOrderDetailModal = ({
             </div>
           </section>
 
+          {/* Delivery failure / cancellation reason — visible to vendor */}
+          {(order.status === "Cancelled" ||
+            order.status === "Failed Delivery") && (
+            <section className="rounded-2xl border border-app-border p-4">
+              <h3 className="text-base font-semibold text-zinc-900 mb-3">
+                {order.status === "Failed Delivery"
+                  ? "Delivery Failure"
+                  : "Cancellation"}
+              </h3>
+              {(() => {
+                const history: any[] = Array.isArray(order.statusHistory)
+                  ? order.statusHistory
+                  : [];
+                const entry = [...history]
+                  .reverse()
+                  .find(
+                    (h: any) =>
+                      h.status === order.status ||
+                      h.status === "Cancelled" ||
+                      h.status === "Failed Delivery",
+                  );
+                return entry?.note ? (
+                  <div
+                    className={`rounded-xl px-4 py-3 ${
+                      order.status === "Failed Delivery"
+                        ? "bg-orange-50"
+                        : "bg-red-50"
+                    }`}
+                  >
+                    <p
+                      className={`text-sm ${
+                        order.status === "Failed Delivery"
+                          ? "text-orange-800"
+                          : "text-red-700"
+                      }`}
+                    >
+                      {entry.note}
+                    </p>
+                    {entry.timestamp && (
+                      <p className="text-xs text-zinc-400 mt-1">
+                        {new Date(entry.timestamp).toLocaleString()}
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm text-zinc-500">No reason recorded</p>
+                );
+              })()}
+            </section>
+          )}
+
           <section className="rounded-2xl border border-app-border p-4">
             <h3 className="text-base font-semibold text-zinc-900 mb-3">Totals</h3>
             <div className="space-y-2 text-sm">

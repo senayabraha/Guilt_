@@ -124,6 +124,7 @@ export const statusColors: Record<string, string> = {
   "Out for Delivery": "bg-app-orange/10 text-app-orange",
   Delivered: "bg-green-100 text-green-700",
   Cancelled: "bg-red-100 text-red-700",
+  "Failed Delivery": "bg-orange-100 text-orange-700",
 };
 
 export const iconsForLeafpad = {

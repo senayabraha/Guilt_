@@ -130,7 +130,9 @@ export default function DeliveryOrderCard({
             className={`px-2 py-0.5 text-xs font-medium rounded-full ${
               order.status === "Delivered"
                 ? "bg-green-100 text-green-700"
-                : "bg-red-100 text-red-700"
+                : order.status === "Failed Delivery"
+                  ? "bg-orange-100 text-orange-700"
+                  : "bg-red-100 text-red-700"
             }`}
           >
             {order.status}

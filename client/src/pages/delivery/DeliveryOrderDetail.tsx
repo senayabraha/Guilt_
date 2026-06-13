@@ -22,7 +22,7 @@ import toast from "react-hot-toast";
 
 import Loading from "../../components/Loading";
 import OtpModal from "../../components/Delivery/OtpModal";
-import CancelModal from "../../components/Delivery/CancelModal";
+import ReportIssueModal from "../../components/Delivery/ReportIssueModal";
 import type { DeliveryPartner, Order } from "../../types";
 import {
   getDeliveryDetail,
@@ -30,6 +30,7 @@ import {
   markDeliveryOutForDelivery,
   completeDelivery,
   cancelDelivery,
+  reportFailedDelivery,
   updateDeliveryLocation,
 } from "../../lib/db/deliveryPartners";
 import { statusColors } from "../../assets/assets";
@@ -52,7 +53,8 @@ function stepState(
   currentStatus: string,
   historyStatuses: Set<string>,
 ): StepState {
-  if (currentStatus === "Cancelled") {
+  // For terminal-exception states, mark completed steps from history
+  if (currentStatus === "Cancelled" || currentStatus === "Failed Delivery") {
     return historyStatuses.has(key) ? "done" : "pending";
   }
   const si = TIMELINE_STEPS.findIndex((s) => s.key === key);
@@ -86,14 +88,23 @@ function StatusTimeline({
   statusHistory: { status: string; timestamp?: string }[];
 }) {
   const histSet = new Set(statusHistory.map((h) => h.status));
-  const isCancelled = status === "Cancelled";
+  const isException =
+    status === "Cancelled" || status === "Failed Delivery";
 
   return (
     <div className="bg-white rounded-2xl border border-app-border px-5 py-4 space-y-3">
-      {isCancelled && (
-        <div className="flex items-center gap-2 text-red-600">
+      {isException && (
+        <div
+          className={`flex items-center gap-2 ${
+            status === "Failed Delivery" ? "text-orange-600" : "text-red-600"
+          }`}
+        >
           <XCircleIcon className="size-4" />
-          <span className="text-sm font-semibold">Delivery Cancelled</span>
+          <span className="text-sm font-semibold">
+            {status === "Failed Delivery"
+              ? "Delivery Failed"
+              : "Delivery Cancelled"}
+          </span>
         </div>
       )}
       <div className="overflow-x-auto pb-1">
@@ -216,7 +227,13 @@ function LocationCard({
 
 // ── Page ───────────────────────────────────────────────────────────────────
 
-type ActionKey = "pickup" | "outForDelivery" | "complete" | "cancel" | null;
+type ActionKey =
+  | "pickup"
+  | "outForDelivery"
+  | "complete"
+  | "cancel"
+  | "failedDelivery"
+  | null;
 
 const STATUS_INFO: Record<
   string,
@@ -244,6 +261,12 @@ const STATUS_INFO: Record<
     bg: "bg-green-50",
     text: "text-green-800",
   },
+  "Failed Delivery": {
+    message:
+      "Delivery could not be completed. The operations team has been notified.",
+    bg: "bg-orange-50",
+    text: "text-orange-800",
+  },
 };
 
 export default function DeliveryOrderDetail() {
@@ -269,9 +292,8 @@ export default function DeliveryOrderDetail() {
   const [otpOpen, setOtpOpen] = useState(false);
   const [otp, setOtp] = useState("");
 
-  // Cancel modal
-  const [cancelOpen, setCancelOpen] = useState(false);
-  const [cancelReason, setCancelReason] = useState("");
+  // Report issue modal (replaces old CancelModal)
+  const [reportIssueOpen, setReportIssueOpen] = useState(false);
 
   // ── Data ─────────────────────────────────────────────────────────────────
   const fetchOrder = async () => {
@@ -379,16 +401,30 @@ export default function DeliveryOrderDetail() {
     }
   };
 
-  const handleCancel = async () => {
+  const handleCancel = async (issueType: string, note: string) => {
+    const reason = note ? `${issueType}: ${note}` : issueType;
     setActionLoading("cancel");
     try {
-      await cancelDelivery(orderId!, cancelReason);
+      await cancelDelivery(orderId!, reason);
       toast.success("Delivery cancelled");
-      setCancelOpen(false);
-      setCancelReason("");
+      setReportIssueOpen(false);
       await fetchOrder();
     } catch (err: any) {
       toast.error(err?.message || "Failed to cancel delivery");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleFailedDelivery = async (issueType: string, note: string) => {
+    setActionLoading("failedDelivery");
+    try {
+      await reportFailedDelivery(orderId!, issueType, note || undefined);
+      toast.success("Failure reported — admin has been notified");
+      setReportIssueOpen(false);
+      await fetchOrder();
+    } catch (err: any) {
+      toast.error(err?.message || "Failed to report delivery failure");
     } finally {
       setActionLoading(null);
     }
@@ -472,9 +508,27 @@ export default function DeliveryOrderDetail() {
   const dropNavUrl = mapsUrl(ship.lat, ship.lng, dropAddress);
 
   const statusInfo = STATUS_INFO[order.status];
-  const isTerminal = ["Delivered", "Cancelled"].includes(order.status);
+  const isTerminal = ["Delivered", "Cancelled", "Failed Delivery"].includes(
+    order.status,
+  );
   const isTrackable = ["Picked Up", "Out for Delivery"].includes(order.status);
+  const canReportFailed = ["Picked Up", "Out for Delivery"].includes(
+    order.status,
+  );
   const isBusy = actionLoading !== null;
+
+  // Last failure/cancel history entry for terminal state display
+  const lastExceptionEntry =
+    isTerminal && order.status !== "Delivered"
+      ? [...order.statusHistory]
+          .reverse()
+          .find(
+            (h) =>
+              h.status === order.status ||
+              h.status === "Cancelled" ||
+              h.status === "Failed Delivery",
+          )
+      : null;
 
   return (
     <div className="space-y-4 pb-8">
@@ -710,16 +764,38 @@ export default function DeliveryOrderDetail() {
           </div>
         )}
 
+        {order.status === "Failed Delivery" && (
+          <div className="bg-orange-50 border border-orange-200 rounded-2xl px-5 py-5 flex items-start gap-3">
+            <AlertTriangleIcon className="size-6 text-orange-500 shrink-0 mt-0.5" />
+            <div>
+              <p className="text-sm font-bold text-orange-800">
+                Delivery could not be completed
+              </p>
+              {lastExceptionEntry?.note && (
+                <p className="text-xs text-orange-700 mt-1">
+                  {lastExceptionEntry.note}
+                </p>
+              )}
+              <p className="text-xs text-orange-600 mt-1.5">
+                The operations team has been notified. No further action
+                required.
+              </p>
+            </div>
+          </div>
+        )}
+
         {order.status === "Cancelled" && (
-          <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-5 flex items-center gap-3">
-            <XCircleIcon className="size-6 text-red-500 shrink-0" />
+          <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-5 flex items-start gap-3">
+            <XCircleIcon className="size-6 text-red-500 shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-bold text-red-700">
                 Delivery cancelled
               </p>
-              <p className="text-xs text-red-600 mt-0.5">
-                This delivery was cancelled and is no longer active.
-              </p>
+              {lastExceptionEntry?.note && (
+                <p className="text-xs text-red-600 mt-1">
+                  {lastExceptionEntry.note}
+                </p>
+              )}
             </div>
           </div>
         )}
@@ -728,7 +804,7 @@ export default function DeliveryOrderDetail() {
         {!isTerminal && (
           <div className="pt-1 border-t border-dashed border-app-border mt-2">
             <button
-              onClick={() => setCancelOpen(true)}
+              onClick={() => setReportIssueOpen(true)}
               disabled={isBusy}
               className="w-full py-3 text-sm font-medium text-red-600 border border-red-200 rounded-2xl hover:bg-red-50 active:bg-red-100 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
             >
@@ -752,16 +828,14 @@ export default function DeliveryOrderDetail() {
           submitting={actionLoading === "complete"}
         />
       )}
-      {cancelOpen && (
-        <CancelModal
-          setCancelModal={(_) => {
-            setCancelOpen(false);
-            setCancelReason("");
-          }}
-          cancelReason={cancelReason}
-          setCancelReason={setCancelReason}
-          handleCancel={handleCancel}
-          submitting={actionLoading === "cancel"}
+      {reportIssueOpen && (
+        <ReportIssueModal
+          canReportFailed={canReportFailed}
+          cancelSubmitting={actionLoading === "cancel"}
+          failedSubmitting={actionLoading === "failedDelivery"}
+          onClose={() => setReportIssueOpen(false)}
+          onCancel={handleCancel}
+          onReportFailed={handleFailedDelivery}
         />
       )}
     </div>

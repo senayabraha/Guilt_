@@ -1528,3 +1528,90 @@ end;
 $$;
 
 grant execute on function public.reject_delivery_request(uuid, text) to authenticated;
+
+-- ============================================================
+-- MIGRATION: failed_delivery_status (20260613030000)
+-- Adds explicit 'Failed Delivery' status for post-pickup
+-- delivery failures, distinct from voluntary cancellations.
+-- Admins and vendors can see the failure reason.
+-- The RPC is idempotent (create or replace) and backward-
+-- compatible: the old 2-arg call still works.
+-- ============================================================
+
+create or replace function public.driver_report_failed_delivery(
+  order_uuid     uuid,
+  failure_reason text,
+  p_note         text default null
+)
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  ord        public.orders%rowtype;
+  dp         public.delivery_partners%rowtype;
+  admin_rec  record;
+  short_id   text;
+  hist_note  text;
+begin
+  select * into ord from public.orders where id = order_uuid;
+  if ord.id is null then
+    raise exception 'Order not found';
+  end if;
+
+  if not exists (
+    select 1 from public.delivery_partners dp2
+    where dp2.id = ord.delivery_partner_id
+      and dp2.auth_user_id = auth.uid()
+  ) then
+    raise exception 'Not authorized';
+  end if;
+
+  if ord.status in ('Delivered', 'Cancelled', 'Failed Delivery') then
+    raise exception 'Order is already complete';
+  end if;
+
+  -- Failure can only be reported after the order has left the store.
+  if ord.status not in ('Picked Up', 'Out for Delivery') then
+    raise exception 'Delivery failure can only be reported after pickup';
+  end if;
+
+  if failure_reason is null or trim(failure_reason) = '' then
+    raise exception 'Failure reason is required';
+  end if;
+
+  select * into dp from public.delivery_partners where auth_user_id = auth.uid();
+
+  -- Combine reason and optional note into a single history note.
+  hist_note := failure_reason;
+  if p_note is not null and trim(p_note) <> '' then
+    hist_note := failure_reason || ' — ' || p_note;
+  end if;
+
+  short_id := upper(right(order_uuid::text, 6));
+
+  update public.orders
+  set status = 'Failed Delivery',
+      status_history = coalesce(status_history, '[]'::jsonb)
+        || jsonb_build_object(
+             'status',    'Failed Delivery',
+             'note',      hist_note,
+             'actor',     'delivery_partner',
+             'timestamp', now()
+           )
+  where id = order_uuid;
+
+  -- Notify all admins so they can reassign or close.
+  for admin_rec in select id from public.profiles where role = 'ADMIN' loop
+    perform public.insert_notification(
+      admin_rec.id, 'ADMIN', 'admin.delivery_failed', 'Delivery failed',
+      coalesce(dp.name, 'A driver') || ' reported a failed delivery for order #'
+        || short_id || '. Reason: ' || failure_reason,
+      'order', order_uuid
+    );
+  end loop;
+end;
+$$;
+
+grant execute on function public.driver_report_failed_delivery(uuid, text, text) to authenticated;

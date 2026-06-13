@@ -23,6 +23,7 @@ const FILTERS = [
   { value: "Partially Available", label: "Partial" },
   { value: "Ready for Pickup", label: "Ready" },
   { value: "Delivered", label: "Done" },
+  { value: "Failed Delivery", label: "Failed" },
   { value: "Cancelled", label: "Cancelled" },
 ];
 

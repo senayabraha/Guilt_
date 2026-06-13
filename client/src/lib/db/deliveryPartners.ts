@@ -32,7 +32,7 @@ export async function getMyDeliveries(
   if (status === "active")
     query = query.in("status", ["Assigned", "Ready for Pickup", "Picked Up", "Out for Delivery"]);
   else if (status === "completed")
-    query = query.in("status", ["Delivered", "Cancelled"]);
+    query = query.in("status", ["Delivered", "Cancelled", "Failed Delivery"]);
   const { data, error } = await query.order("created_at", { ascending: false });
   if (error) throw error;
   return (data ?? []).map(mapOrder);
@@ -112,6 +112,23 @@ export async function cancelDelivery(
   });
   if (error) throw error;
   notifyOrderStatusChanged(orderId, "Cancelled").catch((err) =>
+    console.warn("Failed to create status notification", err),
+  );
+}
+
+export async function reportFailedDelivery(
+  orderId: string,
+  failureReason: string,
+  note?: string,
+): Promise<void> {
+  if (!failureReason.trim()) throw new Error("Failure reason is required.");
+  const { error } = await supabase.rpc("driver_report_failed_delivery", {
+    order_uuid: orderId,
+    failure_reason: failureReason,
+    p_note: note ?? null,
+  });
+  if (error) throw error;
+  notifyOrderStatusChanged(orderId, "Failed Delivery").catch((err) =>
     console.warn("Failed to create status notification", err),
   );
 }

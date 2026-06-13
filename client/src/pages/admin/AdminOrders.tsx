@@ -24,6 +24,7 @@ const STATUS_FILTERS = [
   { value: "Picked Up", label: "Picked Up" },
   { value: "Out for Delivery", label: "In Transit" },
   { value: "Delivered", label: "Delivered" },
+  { value: "Failed Delivery", label: "Failed" },
   { value: "Cancelled", label: "Cancelled" },
 ];
 
@@ -36,6 +37,7 @@ const STATUS_OPTIONS = [
   "Picked Up",
   "Out for Delivery",
   "Delivered",
+  "Failed Delivery",
   "Cancelled",
 ];
 
@@ -48,6 +50,7 @@ const ORDER_STATUS_COLORS: Record<string, string> = {
   "Picked Up": "bg-cyan-100 text-cyan-800",
   "Out for Delivery": "bg-purple-100 text-purple-800",
   Delivered: "bg-green-100 text-green-800",
+  "Failed Delivery": "bg-orange-100 text-orange-800",
   Cancelled: "bg-red-100 text-red-800",
 };
 
@@ -445,6 +448,72 @@ export default function AdminOrders() {
                   >
                     <TruckIcon className="size-4" /> Assign Delivery Partner
                   </button>
+                </div>
+              )}
+
+              {/* Failure / cancellation reason */}
+              {(detailOrder.status === "Cancelled" ||
+                detailOrder.status === "Failed Delivery") && (
+                <div>
+                  <p className="text-xs uppercase font-semibold text-zinc-400 mb-2">
+                    {detailOrder.status === "Failed Delivery"
+                      ? "Failure Reason"
+                      : "Cancellation Reason"}
+                  </p>
+                  {(() => {
+                    const history: any[] = Array.isArray(
+                      detailOrder.statusHistory,
+                    )
+                      ? detailOrder.statusHistory
+                      : Array.isArray(detailOrder.status_history)
+                        ? detailOrder.status_history
+                        : [];
+                    const entry = [...history]
+                      .reverse()
+                      .find(
+                        (h: any) =>
+                          h.status === detailOrder.status ||
+                          h.status === "Cancelled" ||
+                          h.status === "Failed Delivery",
+                      );
+                    return entry?.note ? (
+                      <div
+                        className={`rounded-xl px-4 py-3 space-y-1 ${
+                          detailOrder.status === "Failed Delivery"
+                            ? "bg-orange-50"
+                            : "bg-red-50"
+                        }`}
+                      >
+                        <p
+                          className={`text-sm ${
+                            detailOrder.status === "Failed Delivery"
+                              ? "text-orange-800"
+                              : "text-red-800"
+                          }`}
+                        >
+                          {entry.note}
+                        </p>
+                        {entry.timestamp && (
+                          <p
+                            className={`text-xs ${
+                              detailOrder.status === "Failed Delivery"
+                                ? "text-orange-500"
+                                : "text-red-400"
+                            }`}
+                          >
+                            {new Date(entry.timestamp).toLocaleString()}
+                          </p>
+                        )}
+                        {entry.actor && (
+                          <p className="text-xs text-zinc-400 capitalize">
+                            Reported by: {entry.actor.replace(/_/g, " ")}
+                          </p>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-sm text-zinc-500">No reason recorded</p>
+                    );
+                  })()}
                 </div>
               )}
 
